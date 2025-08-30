@@ -229,7 +229,9 @@ router.get('/admin/review-completed/:reviewer_id', authenticateToken, getAllRevi
  *   post:
  *     summary: Assign a moderator and start article review
  *     description: |
- *       Assigns a moderator (reviewer) to an unassigned article, updates the article's status to `IN_PROGRESS`, and notifies the author.
+ *       This endpoint allows an admin or moderator to assign himself to an unassigned article's edit request. 
+ *       When a moderator picks the request, the article status will be updated to `IN_PROGRESS`.
+ *       The author will be notified that their article is now under review and they will be updated soon.
  *     tags: [Articles]
  *     security:
  *       - bearerAuth: []
@@ -309,9 +311,11 @@ router.post('/admin/moderator-self-assign', authenticateToken, assignModerator);
  *   post:
  *     summary: Submit review feedback on an article
  *     description: |
- *       Allows a moderator (reviewer) to submit feedback on an article. 
- *       Saves the comment, updates the article's status to `AWAITING_USER`, 
- *       notifies the author, and sends a feedback email.
+ *       This endpoint allows a reviewer to submit feedback on an article. 
+ *       The reviewer will review the user's article, 
+ *       and submit their feedback accordingly. 
+ *       If everything is acceptable, the reviewer will **publish** the new article and our notification system will notify their followers.
+ *       If any changes are required, the request status will be updated to `AWAITING_USER` and feedback will be provided to the user for new changes.
  *     tags : [Articles]
  *     security:
  *       - bearerAuth: []
