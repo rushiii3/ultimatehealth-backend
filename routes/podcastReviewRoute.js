@@ -221,8 +221,245 @@ router.get('/podcast-admin/all', adminAuthenticateToken, getAllPodcastsOfModerat
  */
 
 router.get('/podcast-admin/completed', adminAuthenticateToken, getAllCompletedPodcastsOfModerator);
+
+/**
+ * @swagger
+ * /podcast-admin/pick:
+ *   post:
+ *     tags:
+ *       - Podcasts
+ *     summary: Pick a podcast for review or processing
+ *     description: Allows an authenticated admin to pick a podcast that hasn't already been picked by another admin.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               podcast_id:
+ *                 type: string
+ *                 example: "64f8b94a12e4b6fabc123456"
+ *                 description: The ID of the podcast to pick
+ *             required:
+ *               - podcast_id
+ *     responses:
+ *       '200':
+ *         description: Podcast picked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Podcast picked successfully
+ * 
+ *       '400':
+ *         description: Missing or invalid request data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Podcast id is required
+ *       '401':
+ *         description: Unauthorized - JWT token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Unauthorized
+ *       '404':
+ *         description: Podcast or admin not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Podcast or admin not found
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal server error
+ */
+
 router.post('/podcast-admin/pick', adminAuthenticateToken, pickPodcast);
+
+/**
+ * @swagger
+ * /podcast-admin/approve:
+ *   post:
+ *     tags:
+ *       - Podcasts
+ *     summary: Approve and publish a podcast
+ *     description: Allows the authenticated admin who picked the podcast to approve and publish it.
+ *     operationId: approvePodcast
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               podcast_id:
+ *                 type: string
+ *                 example: "64f8b94a12e4b6fabc123456"
+ *                 description: The ID of the podcast to publish
+ *             required:
+ *               - podcast_id
+ *     responses:
+ *       '200':
+ *         description: Podcast published successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Podcast published successfully
+ *       '400':
+ *         description: Validation error or unauthorized action
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: You are not the admin of this podcast
+ *       '404':
+ *         description: Podcast or admin not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Podcast or admin not found
+ *       '401':
+ *         description: Unauthorized - JWT token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Unauthorized
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal server error
+ */
 router.post('/podcast-admin/approve', adminAuthenticateToken, approvePodcast);
+
+/**
+ * @swagger
+ * /podcast-admin/discard:
+ *   post:
+ *     tags:
+ *       - Podcasts
+ *     summary: Discard a podcast
+ *     description: Allows the authenticated admin who picked the podcast to discard it with a reason. Also deletes the associated files.
+ *     operationId: discardPodcast
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               podcast_id:
+ *                 type: string
+ *                 example: "64f8b94a12e4b6fabc123456"
+ *                 description: The ID of the podcast to discard
+ *               discardReason:
+ *                 type: string
+ *                 example: "The audio quality is poor and does not meet our guidelines."
+ *                 description: The reason why the podcast is being discarded
+ *             required:
+ *               - podcast_id
+ *               - discardReason
+ *     responses:
+ *       '200':
+ *         description: Podcast discarded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Podcast discarded successfully
+ *       '400':
+ *         description: Validation error or unauthorized action
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Podcast id or discard-reason are required
+ *       '401':
+ *         description: Unauthorized - Invalid or missing authentication
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Unauthorized
+ *       '404':
+ *         description: Podcast or admin not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Podcast or admin not found
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal server error
+ */
 router.post('/podcast-admin/discard', adminAuthenticateToken, discardPodcast);
 
 module.exports = router;

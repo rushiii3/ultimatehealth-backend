@@ -11,7 +11,7 @@ const options = {
       title: 'API Documentation- UltimateHealth',
       version: '1.0.0',
     },
- 
+
     servers: [{ url: `${url}:${port}/api` }],
     components: {
       securitySchemes: {
@@ -319,7 +319,41 @@ const options = {
           },
           required: ["user_id", "title", "description", "audio_url", "cover_image", "duration"]
         },
-
+        /*****************************************Playlist **************************/
+        Playlist: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            title: {
+              type: 'string',
+              example: "Top AI Podcasts"
+            },
+            user: {
+              type: "object",
+              $ref: "#/components/schemas/User",
+              description: "ID of the user who created the playlist",
+              example: "64f8a7c23fcd1a0012ef4567"
+            },
+            podcasts: {
+              type: "array",
+              items: {
+                type: "object",
+                description: "ID of a podcast included in the playlist.",
+                $ref: "#/components/schemas/Podcast"
+              }
+            },
+            created_at: {
+              type: "string",
+              format: "date-time",
+              example: "2025-08-30T14:45:00.000Z"
+            },
+            updated_at: {
+              type: "string",
+              format: "date-time",
+              example: "2025-08-31T10:12:00.000Z"
+            }
+          }
+        },
         /*******************Comment ******************************************/
         Comment: {
           type: "object",
