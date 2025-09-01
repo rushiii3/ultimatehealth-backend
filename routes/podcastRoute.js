@@ -882,11 +882,448 @@ router.post('/podcast/like', authenticateToken, likePodcast);
  */
 router.post('/podcast/save', authenticateToken, savePodcast);
 
+/**
+ * @swagger
+ * /podcast/update-view-count:
+ *   post:
+ *     summary: Update podcast view count for a published podcast
+ *     description: Updates the view count of a published podcast by a unique user. Each user can only increment the view count once.
+ *     tags:
+ *       - Podcasts
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - podcast_id
+ *             properties:
+ *               podcast_id:
+ *                 type: string
+ *                 example: "6123abc456def78901234567"
+ *     responses:
+ *       200:
+ *         description: View count updated successfully or already viewed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Podcast view count updated"
+ *                 data:
+ *                   $ref: '#/components/schemas/Podcast'
+ *       400:
+ *         description: Podcast is not published
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Podcast is not published"
+ *       401:
+ *         description: Unauthorized – user token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       403:
+ *         description: User is blocked or banned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User is blocked or banned"
+ *       404:
+ *         description: User or Podcast not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User or Podcast not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error updating view"
+ *                 details:
+ *                   type: string
+ *                   example: "Detailed error message here"
+ */
 router.post('/podcast/update-view-count', authenticateToken, updatePodcastViewCount);
 
+/**
+ * @swagger
+ * /podcast/create-playlist:
+ *   post:
+ *     summary: Create a new playlist
+ *     description: Allows an authenticated user to create a playlist with a list of podcasts.
+ *     tags:
+ *       - Playlists
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - podcast_ids
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "My Favorite Podcasts"
+ *               podcast_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["6123abc456def78901234567", "6123abc456def78901234568"]
+ *     responses:
+ *       201:
+ *         description: Playlist created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Playlist created"
+ *                 data:
+ *                   $ref: '#/components/schemas/Playlist'
+ *       400:
+ *         description: Invalid request body
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid request: name, description, and podcast_ids are required"
+ *       401:
+ *         description: Unauthorized – JWT missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error creating playlist"
+ *                 details:
+ *                   type: string
+ *                   example: "Detailed error message"
+ */
 router.post('/podcast/create-playlist', authenticateToken, createPlaylist);
+
+/**
+ * @swagger
+ * /podcast/add-podcast-form-playlist:
+ *   post:
+ *     summary: Add a podcast to an existing playlist
+ *     description: Allows an authenticated user to add a podcast to one of their playlists.
+ *     tags:
+ *       - Playlists
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - podcast_id
+ *               - playlist_id
+ *             properties:
+ *               podcast_id:
+ *                 type: string
+ *                 example: "6123abc456def78901234567"
+ *               playlist_id:
+ *                 type: string
+ *                 example: "7123abc456def78901234567"
+ *     responses:
+ *       200:
+ *         description: Podcast added to playlist successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Podcast added to playlist"
+ *                 data:
+ *                   $ref: '#/components/schemas/Playlist'
+ *       400:
+ *         description: Missing podcast or playlist ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Podcast and Playlist IDs are required"
+ *       401:
+ *         description: Unauthorized – JWT missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: Podcast or Playlist not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Podcast or Playlist not found"
+ *       500:
+ *         description: Server error while adding podcast to playlist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error adding podcast to playlist"
+ *                 details:
+ *                   type: string
+ *                   example: "Detailed error message"
+ */
 router.post('/podcast/add-podcast-form-playlist', authenticateToken, addPodcastToPlaylist);
+
+/**
+ * @swagger
+ * /podcast/remove-podcast-to-playlist:
+ *   post:
+ *     summary: Remove a podcast from a playlist
+ *     description: Removes a podcast from the specified playlist for the authenticated user.
+ *     tags:
+ *       - Playlists
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - podcast_id
+ *               - playlist_id
+ *             properties:
+ *               podcast_id:
+ *                 type: string
+ *                 example: "6123abc456def78901234567"
+ *               playlist_id:
+ *                 type: string
+ *                 example: "7123abc456def78901234567"
+ *     responses:
+ *       200:
+ *         description: Podcast removed from playlist successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Podcast removed from playlist"
+ *                 data:
+ *                   $ref: '#/components/schemas/Playlist'
+ *       400:
+ *         description: Missing podcast or playlist ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Podcast and Playlist IDs are required"
+ *       401:
+ *         description: Unauthorized – JWT missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: Podcast or Playlist not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Podcast or Playlist not found"
+ *       500:
+ *         description: Server error during removal
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error removing podcast from playlist"
+ *                 details:
+ *                   type: string
+ *                   example: "Detailed error message"
+ */
 router.post('/podcast/remove-podcast-to-playlist', authenticateToken, removePodcastFromPlaylist);
+
+/**
+ * @swagger
+ * /podcast/update-playlist:
+ *   post:
+ *     summary: Add or remove a podcast from multiple playlists, or create a new playlist with it
+ *     description: Updates multiple playlists by adding or removing a podcast, and optionally creates a new playlist.
+ *     tags:
+ *       - Playlists
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - addPlaylistIds
+ *               - removePlaylistIds
+ *               - podcast_id
+ *             properties:
+ *               podcast_id:
+ *                 type: string
+ *                 example: "6123abc456def78901234567"
+ *               addPlaylistIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["7123abc456def78901234567", "8123abc456def78901234567"]
+ *               removePlaylistIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["9123abc456def78901234567"]
+ *               playlist_name:
+ *                 type: string
+ *                 example: "New Favorites"
+ *     responses:
+ *       200:
+ *         description: Podcast added/removed from playlists successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Podcast added to playlist"
+ *       201:
+ *         description: New playlist created with the podcast
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Playlist created"
+ *                 data:
+ *                   $ref: '#/components/schemas/Playlist'
+ *       400:
+ *         description: Missing or invalid request parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Playlistids add or remove along with podcast id required"
+ *       401:
+ *         description: Unauthorized – JWT missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: Podcast or Playlist not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Podcast or Playlist not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Detailed error message"
+ */
 router.post('/podcast/update-playlist', authenticateToken, updatePlaylistwithPodcast);
 
 /**
@@ -894,6 +1331,11 @@ router.post('/podcast/update-playlist', authenticateToken, updatePlaylistwithPod
  * @deprecated
  */
 router.put('/podcast/update', authenticateToken, updatePodcast);
+
+/**
+ * 
+ * @deprecated
+ */
 router.put('/podcast/update-playlist', authenticateToken, updatePlaylist);
 
 /**
@@ -901,12 +1343,265 @@ router.put('/podcast/update-playlist', authenticateToken, updatePlaylist);
  * @deprecated
  */
 router.delete('/podcast/delete', authenticateToken, deletePodcast);
+
+/**
+ * @swagger
+ * /api/playlists/delete:
+ *   delete:
+ *     summary: Delete a playlist
+ *     description: Deletes a playlist by its ID. Only accessible to authenticated users.
+ *     tags:
+ *       - Playlists
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - playlistId
+ *             properties:
+ *               playlistId:
+ *                 type: string
+ *                 example: "6123abc456def78901234567"
+ *     responses:
+ *       200:
+ *         description: Playlist deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Playlist deleted successfully"
+ *       400:
+ *         description: Missing playlist ID in request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid request: playlistId is required"
+ *       401:
+ *         description: Unauthorized – JWT missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: Playlist not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Playlist not found"
+ *       500:
+ *         description: Server error during playlist deletion
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "An error occurred while deleting playlist"
+ */
 router.delete('/podcast/delete-playlist', authenticateToken, deletePlaylist);
 
 // workspace
-
+/**
+ * @swagger
+ * /podcast/discarded:
+ *   get:
+ *     summary: Get user's discarded podcasts
+ *     description: Retrieves all podcasts marked as discarded by the moderator with pagination support.
+ *     tags:
+ *       - Podcasts
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of discarded podcasts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 discardedPodcasts:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Podcast'
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 2
+ *       401:
+ *         description: Unauthorized – JWT token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized: Please login to access this resource"
+ *       500:
+ *         description: Server error during data retrieval
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to fetch discarded podcasts due to server error"
+ */
 router.get('/podcast/discarded', authenticateToken, getDiscardedPodcasts);
+
+/**
+ * @swagger
+ * /podcast/user-pending:
+ *   get:
+ *     summary: Get user's pending podcasts
+ *     description: Retrieves podcasts created by the authenticated user that are either in-progress or under review.
+ *     tags:
+ *       - Podcasts
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of pending podcasts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 pendingPodcasts:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Podcast'
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 3
+ *       401:
+ *         description: Unauthorized – JWT token is missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized: Access token is missing or invalid"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unexpected error while fetching pending podcasts"
+ */
 router.get('/podcast/user-pending', authenticateToken, getUserPendingPodcasts);
+
+/**
+ * @swagger
+ * /podcast/user-published:
+ *   get:
+ *     summary: Get user's published podcasts
+ *     description: Retrieves all published podcasts of the authenticated user with pagination.
+ *     tags:
+ *       - Podcasts
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of published podcasts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 publishedPodcasts:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Podcast'
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 5
+ *       401:
+ *         description: Unauthorized – JWT token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized: Invalid or expired token"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Something went wrong while retrieving published podcasts"
+ */
 router.get('/podcast/user-published', authenticateToken, getUserPublishedPodcasts);
 
 
