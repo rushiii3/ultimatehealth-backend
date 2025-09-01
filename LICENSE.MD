@@ -1,6 +1,6 @@
 # MIT License
 
-Copyright (c) 2024 **UltimateHealth**
+Copyright(c) 2024 **UltimateHealth**
 
 Repository Maintainer: **Susmita Bhattacharya**
 
