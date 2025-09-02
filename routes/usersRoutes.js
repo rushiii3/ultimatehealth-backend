@@ -154,7 +154,7 @@ router.post("/user/register", register);
  *   post:
  *     summary: User login
  *     tags:
- *       - Auth
+ *       - User
  *     description: |
  *       Authenticates a user with email and password.  
  *       Requires FCM Token for push notifications.  
@@ -268,7 +268,7 @@ router.post("/user/login", login);
  *   post:
  *     summary: Refresh access and refresh tokens
  *     tags:
- *       - Auth
+ *       - User
  *     description: |
  *       Accepts a valid refresh token, verifies it, and returns a new access token and a new refresh token.  
  *       Also updates the refresh token stored in the database and sets cookies accordingly.
