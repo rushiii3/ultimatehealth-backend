@@ -1321,17 +1321,491 @@ router.post(
  */
 router.get("/user/getdetails", authenticateToken, getUserDetails);
 
-// Update user password
+
+/**
+ * @swagger
+ * /user/update-password:
+ *   put:
+ *     summary: Update User Password
+ *     description: Allows a user to update their password by providing the old and new password.
+ *     tags:
+ *       - User
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - old_password
+ *               - new_password
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 example: "64f213f9e0f35d7f30b9d111"
+ *               old_password:
+ *                 type: string
+ *                 example: "OldPass123"
+ *               new_password:
+ *                 type: string
+ *                 example: "NewPass456"
+ *     responses:
+ *       200:
+ *         description: Password successfully updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password updated
+ *       400:
+ *         description: Bad request (e.g., missing fields, password too short, same as old password)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Missing passwords and user id
+ *       401:
+ *         description: Unauthorized (e.g., invalid old password)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid old password
+ *       403:
+ *         description: Forbidden (e.g., user is banned or blocked)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User is banned or blocked.
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Server error
+ */
 router.put("/user/update-password", updateUserPassword);
 
 // Update user general details
+/**
+ * @swagger
+ * /user/update-general-details:
+ *   put:
+ *     tags:
+ *       - User
+ *     summary: Update user general details
+ *     description: Update the general details of a logged-in user. This is a protected route.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - userHandle
+ *               - email
+ *               - about
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: johndoe
+ *                 description: The user's full name
+ *               userHandle:
+ *                 type: string
+ *                 example: john123
+ *                 description: The user's unique handle/username
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: johndoe@example.com
+ *                 description: The user's email address
+ *               about:
+ *                 type: string
+ *                 example: Software developer and tech enthusiast.
+ *                 description: A brief description about the user
+ *     responses:
+ *       200:
+ *         description: User details updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User details updated successfully
+ *       400:
+ *         description: Bad request - missing fields or email/user handle already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Please provide all required fields
+ *       401:
+ *         description: Unauthorized - user is not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized
+ *       403:
+ *         description: Forbidden - user is banned or blocked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User is banned or blocked.
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       409:
+ *         description: Conflict - duplicate email or user handle
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Email or user handle already exists
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ *
+ */
+
 router.put("/user/update-general-details", authenticateToken, updateUserGeneralDetails);
 
 // Update user contact details
+
+/**
+ * @swagger
+ * /user/update-contact-details:
+ *   put:
+ *     tags:
+ *       - User
+ *     summary: Update user contact details
+ *     description: Update the contact details (email and phone) of the logged-in user. Protected route.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - phone
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: johndoe@example.com
+ *                 description: The user's email address
+ *               phone:
+ *                 type: string
+ *                 example: "+1234567890"
+ *                 description: The user's phone number
+ *     responses:
+ *       200:
+ *         description: User contact updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User contact updated successfully
+ *       400:
+ *         description: Bad request - missing fields or email/phone already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Please provide all required fields
+ *       401:
+ *         description: Unauthorized - user is not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized
+ *       403:
+ *         description: Forbidden - user is banned or blocked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User is banned or blocked.
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       409:
+ *         description: Conflict - duplicate email or phone number
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Email or user handle already exists
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ *
+ */
+
 router.put("/user/update-contact-details", authenticateToken, updateUserContactDetails);
 
 // Update user professional details
+/**
+ * @swagger
+ * /user/update-professional-details:
+ *   put:
+ *     tags:
+ *       - User
+ *     summary: Update user professional details
+ *     description: Update the professional details of the logged-in user.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - specialization
+ *               - qualification
+ *               - experience
+ *             properties:
+ *               specialization:
+ *                 type: string
+ *                 example: Cardiology
+ *                 description: The user's area of specialization
+ *               qualification:
+ *                 type: string
+ *                 example: MBBS, MD
+ *                 description: The user's professional qualification(s)
+ *               experience:
+ *                 type: number
+ *                 example: 10
+ *                 description: Years of professional experience
+ *     responses:
+ *       200:
+ *         description: User details updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User details updated successfully
+ *       400:
+ *         description: Bad request - missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Please provide all required fields
+ *       401:
+ *         description: Unauthorized - user is not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized
+ *       403:
+ *         description: Forbidden - user is banned or blocked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User is banned or blocked.
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ *
+ */
+
 router.put("/user/update-professional-details", authenticateToken, updateUserProfessionalDetails);
+
+/**
+ * @swagger
+ * /user/check-user-handle:
+ *   post:
+ *     tags:
+ *       - User
+ *     summary: Check if a user handle is unique
+ *     description: Checks whether a user handle already exists in the system (including verified users, unverified users, and admins).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userHandle
+ *             properties:
+ *               userHandle:
+ *                 type: string
+ *                 example: john_doe
+ *                 description: The user handle to be checked
+ *     responses:
+ *       200:
+ *         description: Successfully checked the user handle
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                   description: Indicates whether the handle is already taken
+ *                 message:
+ *                   type: string
+ *                   example: User handle is available.
+ *       400:
+ *         description: Bad request - user handle not provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User handle is required
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
 router.post("/user/check-user-handle", checkUserHandle); 
 
 
