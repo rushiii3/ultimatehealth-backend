@@ -1173,7 +1173,7 @@ router.post("/user/logout", authenticateToken, logout);
 /**
  * @swagger
  * /user/update-profile-image:
- *   put:
+ *   post:
  *     summary: Update user's profile image
  *     description: >
  *       Allows an authenticated user to update their profile image URL.
