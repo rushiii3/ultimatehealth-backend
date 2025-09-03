@@ -53,6 +53,11 @@ app.use(compression()); // Compress response bodies
 app.use(express.json()); // Parse incoming JSON requests
 //app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true }))
+app.use(cors({
+  origin: ["http://uhsocial.in", "https://uhsocial.in"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true
+}));
 
 // Define routes
 app.use("/api", userRoutes);
@@ -75,6 +80,9 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get("/hello", (req, res) => {
     console.log("Hello World");
     res.send('Hello World');
+});
+app.get('/', (req, res) => {
+  res.send("API is working!");
 });
 
 
