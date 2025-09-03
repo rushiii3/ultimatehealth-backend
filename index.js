@@ -74,13 +74,15 @@ app.use("/api", podcastRoute);
 app.use("/api", podcastAdminRoute);
 
 // Swagger
-app.use('/docs/swagger.json', express.static('./swagger.json'));
-
+//app.use('/docs/swagger.json', express.static('./swagger.json'));
+/*
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(null, {
   swaggerOptions: {
     url: '/docs/swagger.json' // important
   }
 }));
+*/
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 // Test route (can be removed later)
