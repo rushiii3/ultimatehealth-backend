@@ -12,7 +12,7 @@ const options = {
       version: '1.0.0',
     },
 
-    servers: [{ url: `/` }],
+    servers: [{ url: `${url}/api` }],
     components: {
       securitySchemes: {
         bearerAuth: {
