@@ -21,7 +21,7 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
             const { page = 1, limit = 10 } = req.query;
             const skip = (Number(page) - 1) * parseInt(limit);
 
-            const articles = await Article.find({
+            let articles = await Article.find({
                 status: statusEnum.statusEnum.UNASSIGNED,
                 is_removed: false
             })
@@ -67,7 +67,7 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
             return res.status(400).json({ message: 'Reviewer ID is required.' });
         }
         try {
-            const articles = await Article.find({
+            let articles = await Article.find({
                 reviewer_id: reviewer_id,
                 is_removed: false,
                 status: {
@@ -119,7 +119,7 @@ module.exports.getAllReviewCompletedArticles = expressAsyncHandler(
             return res.status(400).json({ message: 'Reviewer ID is required.' });
         }
         try {
-            const articles = await Article.find({
+            let articles = await Article.find({
                 reviewer_id: reviewer_id,
                 is_removed: false,
                 status: {
