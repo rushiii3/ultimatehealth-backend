@@ -84,7 +84,7 @@ router.get('/user-stats/:userId', authenticateToken, controller.getTotalLikeAndV
 
 /**
  * @openapi
- * /analytics/total-reads/:userId:
+ * /analytics/total-reads/{userId}:
  *   get:
  *     summary: Get total read count and progress for a user
  *     description: |
@@ -155,7 +155,7 @@ router.get('/total-reads/:userId', authenticateToken, controller.getTotalReadCou
 
 /**
  * @openapi
- * /analytics/total-writes/:userId:
+ * /analytics/total-writes/{userId}:
  *   get:
  *     summary: Get total write count and progress for a user
  *     description: |

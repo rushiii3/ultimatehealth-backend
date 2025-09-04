@@ -1346,7 +1346,7 @@ router.delete('/podcast/delete', authenticateToken, deletePodcast);
 
 /**
  * @swagger
- * /api/playlists/delete:
+ * /podcast/delete-playlist:
  *   delete:
  *     summary: Delete a playlist
  *     description: Deletes a playlist by its ID. Only accessible to authenticated users.

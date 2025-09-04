@@ -68,7 +68,7 @@ router.get('/admin/articles-for-review', authenticateToken, getAllArticleForRevi
 
 /**
  * @swagger
- * /admin/review-progress/:reviewer_id:
+ * /admin/review-progress/{reviewer_id}:
  *   get:
  *     summary: Get all in-progress articles assigned to a reviewer or moderator
  *     description: |
@@ -148,7 +148,7 @@ router.get('/admin/review-progress/:reviewer_id', authenticateToken, getAllInPro
 
 /**
  * @openapi
- * /admin/review-completed/:reviewer_id:
+ * /admin/review-completed/{reviewer_id}:
  *   get:
  *     summary: Get all review-completed articles for a reviewer
  *     description: |
