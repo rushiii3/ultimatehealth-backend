@@ -334,7 +334,7 @@ const getPbFile = expressAsyncHandler(
             const id = req.params.id;
             const result = await getHTMLFileContent('content', id);
             //const record = await pb.collection('content').getOne(id);
-            //const htmlFileUrl = pb.files.getUrl(record, record.html_file);
+            //const htmlFileUrl = pb.files.getURL(record, record.html_file);
 
             //const response = await fetch(htmlFileUrl);
             //const htmlContent = await response.text();
@@ -449,7 +449,7 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
                 return res.status(404).json({ message: 'Record not found' });
             }
 
-            const fileUrl = pb.files.getUrl(improvementRecord, improvementRecord.edited_html_file, { download: true });
+            const fileUrl = pb.files.getURL(improvementRecord, improvementRecord.edited_html_file, { download: true });
             const tempFilePath = path.join(os.tmpdir(), improvementRecord.edited_html_file);
 
             const response = await axios.get(fileUrl, { responseType: 'stream' });
