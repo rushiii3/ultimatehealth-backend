@@ -92,7 +92,7 @@ const deleteArticleRecordFromPocketbase = async (record_id) => {
 
     } catch (err) {
         console.log("Error deleteing improvement file from pocketbase:", err);
-        return res.status(500).json({ message: 'Internal server error' });
+       // return res.status(500).json({ message: 'Internal server error' });
     }
 }
 

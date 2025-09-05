@@ -602,7 +602,6 @@ async function unassignArticle() {
 async function discardArticle() {
 
     try {
-
         const sixtyDaysAgo = new Date();
         sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
