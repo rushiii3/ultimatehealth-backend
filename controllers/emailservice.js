@@ -44,7 +44,7 @@ const Sendverifymail = async (req, res) => {
   if (!email || !token) {
     return res.status(400).json({ message: 'Email and token are required' });
   }
-
+  console.log("Verify email admin", isAdmin);
   let user;
   if (isAdmin) {
     user = await admin.findOne({ email });
