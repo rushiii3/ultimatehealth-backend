@@ -317,7 +317,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             //console.log("Author Id", article.authorId);
             //console.log("User Id", userId);
 
-            if (article.authorId !== userId) {
+            if (article.authorId.toString() !== userId) {
                 res.status(403).json({ message: "You are not the author of this article" });
                 return;
             }
