@@ -8,6 +8,7 @@ const articleReviewNotificationsToUser = require('./controllers/notifications/no
 const sendArticleFeedbackEmail = require('./controllers/emailservice');
 const EditRequest = require('./models/admin/articleEditRequestModel');
 const Podcast = require('./models/Podcast');
+const statusEnum = require("./utils/StatusEnum");
 
 const Article = require('./models/Articles');
 const User = require('./models/UserModel');
