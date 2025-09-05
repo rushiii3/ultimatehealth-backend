@@ -114,7 +114,7 @@ const verifyEmail = async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (isAdmin) {
+    if (isAdmin === 'true') {
       const user = await admin.findOne({ email: decoded.email });
 
       if (!user) {
