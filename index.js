@@ -790,15 +790,16 @@ io.on('connection', (socket) => {
                         return;
                     }
 
-                    if (article.reviewer_id !== reviewer._id) {
+                    if (article.reviewer_id.toString() !== reviewer._id.toString()) {
                         socket.emit('error', { message: 'You are not authorized to access this article' });
+                        return;
                     }
 
                     if (isReview) {
                         const comment = new Comment({
                             adminId: reviewer._id,
                             articleId: article._id,
-                            parentCommentId: parentCommentId || null,
+                           // parentCommentId: parentCommentId || null,
                             content: feedback,
                             isReview: true,
                             isNote: false
