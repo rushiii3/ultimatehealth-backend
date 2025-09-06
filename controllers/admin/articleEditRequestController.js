@@ -581,7 +581,7 @@ module.exports.publishImprovement = expressAsyncHandler(
 
             // Update admin contribution for publish new article
             const aggregate = new AdminAggregate({
-                userId: article.reviewer_id,
+                userId: editRequest.reviewer_id,
                 contributionType: 2,
             });
 
