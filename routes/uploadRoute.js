@@ -623,7 +623,7 @@ uploadRoute.get('/articles/get-article-content/:id', authenticateToken, controll
  *                   type: string
  *                   example: Internal server error
  */
-uploadRoute.get('/articles/get-improve-content', authenticateToken, controller.getIMPFile);
+uploadRoute.get('/article/get-improve-content', authenticateToken, controller.getIMPFile);
 
 
 /**
