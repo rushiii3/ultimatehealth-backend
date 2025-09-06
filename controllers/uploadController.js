@@ -455,7 +455,7 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
                 improvementRecord = await pb.collection('edit_requests').getOne(record_id);
             } catch (err) {
                 console.log(err);
-               return res.status(400).json({ message: 'Improvement record has no HTML file to publish' });
+               return res.status(200).json({ message: 'Improvement record has no HTML file to publish' });
             }
 
             if (!improvementRecord.edited_html_file) {
