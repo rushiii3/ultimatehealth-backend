@@ -465,7 +465,7 @@ module.exports.detectContentLoss = expressAsyncHandler(
 
             const htmlDiff = differences.map((part) => {
 
-                const bg = part.added ? '#c8facc' : part.removed ? '#fdd' : 'transparent';
+                const bg = part.added ? '#fdd' : part.removed ? '#c8facc' : 'transparent';
                 const tag = part.added ? 'ins' : part.removed ? 'del' : 'span';
                 return `<${tag} style="background-color:${bg}; padding:2px;">${escapeHtml(part.value)}</${tag}>`;
             }).join('');
