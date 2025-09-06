@@ -43,8 +43,8 @@ const authenticateAdmin = async (pb) => {
     const ADMIN_EMAIL = process.env.DATASOURCE_USERNAME;
     const ADMIN_PASSWORD = process.env.DATASOURCE_PASSWORD;
 
-    //console.log('admin email',ADMIN_EMAIL);
-    //  console.log('admin-pass',ADMIN_PASSWORD);
+    console.log('admin email',ADMIN_EMAIL);
+     console.log('admin-pass',ADMIN_PASSWORD);
 
     try {
 
