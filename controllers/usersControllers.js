@@ -1232,7 +1232,7 @@ module.exports.updateUserGeneralDetails = expressAsyncHandler(
 module.exports.updateUserContactDetails = expressAsyncHandler(
   async (req, res) => {
     try {
-      const userId = req?.user?.userId;
+      const userId = req?.userId;
       const { phone, email } = req.body;
 
       // Validate input fields
@@ -1313,7 +1313,7 @@ module.exports.updateUserContactDetails = expressAsyncHandler(
 module.exports.updateUserProfessionalDetails = expressAsyncHandler(
   async (req, res) => {
     try {
-      const userId = req?.user?.userId;
+      const userId = req?.userId;
 
       const { specialization, qualification, experience } = req.body;
 
