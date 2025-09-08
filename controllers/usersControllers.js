@@ -1168,7 +1168,7 @@ module.exports.updateUserGeneralDetails = expressAsyncHandler(
 
 
       // Find the user by ID
-      const user = await User.findById(userId);
+      const user = await User.findById(req.userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
