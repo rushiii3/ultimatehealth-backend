@@ -12,7 +12,7 @@ The repository is  the core engine powering the UltimateHealth platform. This ba
   ### ✅ Article CRUD with edit request workflows 
 
   Managing content at scale requires a clear and controlled workflow to ensure quality, accuracy, and accountability. 
-  This system outlines how articles are created, reviewed, and improved over time using a structured CRUD (Create, Read, Update, Delete) approach — enriched by an edit request mechanism, inspired by proven         practices at platforms like **GeeksforGeeks**.
+  This system outlines how articles are created, reviewed, and improved over time using a structured CRUD (Create, Read, Update, Delete) approach — enriched by an edit request mechanism, inspired by proven         practices at platforms.
 
     (a) Submit Article for Review Process
         To maintain content quality, all newly created articles must go through a structured review process before publication.
