@@ -45,7 +45,7 @@ const startConversation = expressAsyncHandler(
 
             // 5. Save assistant message
             const newMsg = await Message.create({
-                role: "system",
+                role: "model",
                 text: reply,
                 conversationId
             });

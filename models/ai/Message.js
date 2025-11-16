@@ -5,7 +5,7 @@ const messageSchema = new mongoose.Schema({
   _id: { type: Number, autoIncrement: true },
 
   text: { type: String, required: true },
-  role: { type: String, enum: ["user", "system"], required: true },
+  role: { type: String, enum: ["user", "model"], required: true },
 
   conversationId: {
     type: mongoose.Schema.Types.ObjectId,
