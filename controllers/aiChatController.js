@@ -10,13 +10,14 @@ dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const MAX_DAY_LIMIT = 5;
 
 
 const startConversation = expressAsyncHandler(
     async (req, res) => {
         try {
             const userId = req.userId;
-           // console.log("User id", req.userId);
+            // console.log("User id", req.userId);
             const { text } = req.body;
 
             if (!text) {
@@ -25,6 +26,7 @@ const startConversation = expressAsyncHandler(
 
             let user = await User.findById(userId);
 
+
             if (!user.conversationId) {
                 const newConv = await Conversation.create({ userId });
                 user.conversationId = newConv._id;
@@ -32,6 +34,22 @@ const startConversation = expressAsyncHandler(
             }
 
             const conversationId = user.conversationId;
+
+            const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+            let messages = await Message.find({
+                conversationId: conversationId,
+                role: 'model',
+                createdAt: { $gte: startOfDay, $lte: endOfDay }
+            });
+
+            if (messages.length > MAX_DAY_LIMIT) {
+                return res.status(429).json({
+                    success: false,
+                    error: "Daily quota exceeded",
+                    remaining: 0
+                });
+            }
 
             // 2. Save user message
             await Message.create({
@@ -90,7 +108,7 @@ const loadConversations = expressAsyncHandler(
             if (!user || !user.conversationId) {
                 return res.json({ messages: [] });
             }
-           
+
             const messages = await Message.find({
                 conversationId: user.conversationId
             }).sort({ _id: 1 });
