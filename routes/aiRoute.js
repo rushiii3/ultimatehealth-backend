@@ -9,6 +9,8 @@ const { startConversation,loadConversations } = require('../controllers/aiChatCo
  *   post:
  *     summary: Send a message to Gemini & receive response
  *     tags: [ChatBot]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -42,6 +44,8 @@ router.post("/send", authToken, startConversation);
  *   get:
  *     summary: Get all chat messages for the user
  *     tags: [ChatBot]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Array of messages
