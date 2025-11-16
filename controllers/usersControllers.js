@@ -425,7 +425,8 @@ module.exports.login = expressAsyncHandler(
           .json({ error: "Please provide email and password and FCM Token" });
       }
 
-      let user = await User.findOne({ email });
+      let user = await User.findOne({ email: email });
+      console.log("User", user);
       if (!user) {
         user = await UnverifiedUser.findOne({ email });
         if (!user) return res.status(404).json({ error: "User not found" });

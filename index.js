@@ -28,6 +28,7 @@ const articleEditRoute = require('./routes/articleEditRequestRoute');
 const adminRoute = require('./routes/adminRoute');
 const podcastRoute = require('./routes/podcastRoute');
 const podcastAdminRoute = require('./routes/podcastReviewRoute');
+const aiRoute = require('./routes/aiRoute');
 const {
     sendPostNotification,
     sendPostLikeNotification,
@@ -73,6 +74,7 @@ app.use("/api", adminRoute);
 app.use("/api", articleEditRoute);
 app.use("/api", podcastRoute);
 app.use("/api", podcastAdminRoute);
+app.use("/api/gemini", aiRoute);
 
 // Swagger
 //app.use('/docs/swagger.json', express.static('./swagger.json'));

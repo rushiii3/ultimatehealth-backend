@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
     user_id: {
         type: Schema.Types.ObjectId,
         auto: true,
-        unique:true,
+        unique: true,
     },
     user_name: {
         type: String,
@@ -91,14 +91,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
-    refreshToken: { type: String, default: null } ,
-    fcmToken: { type: String, default: null }, 
+    refreshToken: { type: String, default: null },
+    fcmToken: { type: String, default: null },
     articles: {
         type: [Number],
         ref: 'Article',
         default: []
     },
-    
+
     repostArticles: {
         type: [Number],
         ref: 'Article',
@@ -139,34 +139,39 @@ const userSchema = new mongoose.Schema({
 
     followingCount: {
         type: Number,
-       // required: true,
+        // required: true,
         default: 0,
     },
-    activeReportCount:{
-        type:Number,
-        default:0
-    },
-    isBannedUser:{
-        type:Boolean,
-        default:false
-    },
-    isBlockUser:{
-        type: Boolean,
-        default: false
-    },
-    reportFeatureMisuse:{
+    activeReportCount: {
         type: Number,
         default: 0
     },
-    strikeCount:{
-        type:Number,
-        default:0
+    isBannedUser: {
+        type: Boolean,
+        default: false
     },
-    blockedAt:{
-     type: Date,
-     default: null,
+    conversationId: {
+        type: Schema.Types.ObjectId,
+        ref: "Conversation",
+        default: null
+    },
+    isBlockUser: {
+        type: Boolean,
+        default: false
+    },
+    reportFeatureMisuse: {
+        type: Number,
+        default: 0
+    },
+    strikeCount: {
+        type: Number,
+        default: 0
+    },
+    blockedAt: {
+        type: Date,
+        default: null,
     }
-    
+
 });
 
 const User = mongoose.model('User', userSchema);

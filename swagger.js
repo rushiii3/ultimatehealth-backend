@@ -714,6 +714,25 @@ const options = {
           required: ["type", "title", "message"]
         },
 
+        /************************** AI WORK ***************************************************/
+        Conversation: {
+          type: "object",
+          properties: {
+            _id: { type: "string" },
+            userId: { type: "string" }
+          }
+        },
+        Message: {
+          type: "object",
+          properties: {
+            _id: { type: "number" },
+            role: { type: "string", enum: ["user", "assistant"] },
+            text: { type: "string" },
+            conversationId: { type: "string" },
+            timestamp: { type: "number" }
+          }
+        },
+
 
         AdminLoginRequest: {
           type: "object",
