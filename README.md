@@ -1,4 +1,4 @@
-# backend_ultimatehealth
+# UltimateHealth Backend (Open for all Learners, Free Resource)
 
 The repository is  the core engine powering the UltimateHealth platform. This backend service provides secure, and efficient APIs to support a seamless experience for users accessing trustable health resources and expert insights, built with Node js  and Express.✅💡. It uses MongoDB for data storage and JWT for secure authentication. 
 
