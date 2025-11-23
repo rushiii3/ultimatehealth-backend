@@ -28,6 +28,7 @@ const articleEditRoute = require('./routes/articleEditRequestRoute');
 const adminRoute = require('./routes/adminRoute');
 const podcastRoute = require('./routes/podcastRoute');
 const podcastAdminRoute = require('./routes/podcastReviewRoute');
+const commentRoute = require('./routes/commentRoute');
 const aiRoute = require('./routes/aiRoute');
 const {
     sendPostNotification,
@@ -74,6 +75,7 @@ app.use("/api", adminRoute);
 app.use("/api", articleEditRoute);
 app.use("/api", podcastRoute);
 app.use("/api", podcastAdminRoute);
+app.use("/api/review", commentRoute);
 app.use("/api/gemini", aiRoute);
 
 // Swagger
@@ -948,7 +950,7 @@ io.on('connection', (socket) => {
     ));
     // load-review-comments (only article specific)
 
-    socket.on('load-review-comments', expressAsyncHandler(
+    socket.on('load-review-comments',
 
         async (data) => {
 
@@ -980,9 +982,9 @@ io.on('connection', (socket) => {
                 } else if (requestId) {
 
                     const requests = await EditRequest.findById(requestId).populate({
-                            path: 'editComments',
-                            options: { sort: { createdAt: -1 } }
-                        }).exec();
+                        path: 'editComments',
+                        options: { sort: { createdAt: -1 } }
+                    }).exec();
                     if (requests && requests.editComments) {
                         requests.editComments = requests.editComments.filter(comment => !comment.is_removed);
                         socket.emit('review-comments', requests.editComments);
@@ -998,7 +1000,7 @@ io.on('connection', (socket) => {
             }
         }
 
-    ));
+    );
 
     socket.on('disconnect', () => {
         console.log('User disconnected');
