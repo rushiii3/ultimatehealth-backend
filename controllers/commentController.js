@@ -18,14 +18,20 @@ module.exports.loadReviewComments = expressAsyncHandler(async (req, res) => {
                 .populate({
                     path: "review_comments",
                     options: { sort: { createdAt: -1 } },
-                    populate: {
-                        path: "userId",
-                        select: "user_handle Profile_image",
-                        match: {
-                            isBlockUser: false,
-                            isBannedUser: false,
+                    populate: [
+                        {
+                            path: "userId",
+                            select: "user_handle Profile_image",
+                            match: {
+                                isBlockUser: false,
+                                isBannedUser: false
+                            }
+                        },
+                        {
+                            path: "adminId",
+                            select: "user_handle Profile_image"
                         }
-                    }
+                    ]
                 });
 
             if (!article || article.is_removed) {
@@ -45,14 +51,20 @@ module.exports.loadReviewComments = expressAsyncHandler(async (req, res) => {
                 .populate({
                     path: "editComments",
                     options: { sort: { createdAt: -1 } },
-                    populate: {
-                        path: "userId",
-                        select: "user_handle Profile_image",
-                        match: {
-                            isBlockUser: false,
-                            isBannedUser: false,
+                    populate: [
+                        {
+                            path: "userId",
+                            select: "user_handle Profile_image",
+                            match: {
+                                isBlockUser: false,
+                                isBannedUser: false
+                            }
+                        },
+                        {
+                            path: "adminId",
+                            select: "user_handle Profile_image"
                         }
-                    }
+                    ]
                 });
 
             if (!request) {

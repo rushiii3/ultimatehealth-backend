@@ -819,7 +819,23 @@ io.on('connection', (socket) => {
 
                         await article.save();
 
-                        socket.emit('new-feedback', comment);
+                        const newRes = await Comment.findById(comment._id).populate([
+                            {
+                                path: "userId",
+                                select: "user_handle Profile_image",
+                                match: {
+                                    isBlockUser: false,
+                                    isBannedUser: false
+                                }
+                            },
+                            {
+                                path: "adminId",
+                                select: "user_handle Profile_image"
+                            }
+                        ]);
+
+
+                        socket.emit('new-feedback', newRes);
                         // userId, articleId, articleRecordId, title, message
                         articleReviewNotificationsToUser(article.authorId._id, article._id,
                             article.pb_recordId,
@@ -857,7 +873,23 @@ io.on('connection', (socket) => {
                             `New Additional Note from Author`,
                             `An author has added a new note to the article titled ${article.title}.`
                         );
-                        socket.emit('new-feedback', comment);
+
+                        const newRes = await Comment.findById(comment._id).populate([
+                            {
+                                path: "userId",
+                                select: "user_handle Profile_image",
+                                match: {
+                                    isBlockUser: false,
+                                    isBannedUser: false
+                                }
+                            },
+                            {
+                                path: "adminId",
+                                select: "user_handle Profile_image"
+                            }
+                        ]);
+
+                        socket.emit('new-feedback', newRes);
                     }
                 } else if (requestId) {
 
@@ -898,7 +930,23 @@ io.on('connection', (socket) => {
 
                         await editRequest.save();
 
-                        socket.emit('new-feedback', comment);
+                        const newRes = await Comment.findById(comment._id).populate([
+                            {
+                                path: "userId",
+                                select: "user_handle Profile_image",
+                                match: {
+                                    isBlockUser: false,
+                                    isBannedUser: false
+                                }
+                            },
+                            {
+                                path: "adminId",
+                                select: "user_handle Profile_image"
+                            }
+                        ]);
+
+
+                        socket.emit('new-feedback', newRes);
 
                         // userId, articleId, articleRecordId, title, message
                         articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id,
@@ -927,7 +975,24 @@ io.on('connection', (socket) => {
 
                         await editRequest.save();
 
-                        socket.emit('new-feedback', comment);
+
+                        const newRes = await Comment.findById(comment._id).populate([
+                            {
+                                path: "userId",
+                                select: "user_handle Profile_image",
+                                match: {
+                                    isBlockUser: false,
+                                    isBannedUser: false
+                                }
+                            },
+                            {
+                                path: "adminId",
+                                select: "user_handle Profile_image"
+                            }
+                        ]);
+
+
+                        socket.emit('new-feedback', newRes);
 
                         articleSubmitNotificationsToAdmin(
                             editRequest.reviewer_id,
