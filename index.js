@@ -830,7 +830,7 @@ io.on('connection', (socket) => {
                             },
                             {
                                 path: "adminId",
-                                select: "user_handle Profile_image"
+                                select: "user_handle Profile_avtar"
                             }
                         ]);
 
@@ -885,7 +885,7 @@ io.on('connection', (socket) => {
                             },
                             {
                                 path: "adminId",
-                                select: "user_handle Profile_image"
+                                select: "user_handle Profile_avtar"
                             }
                         ]);
 
@@ -941,7 +941,7 @@ io.on('connection', (socket) => {
                             },
                             {
                                 path: "adminId",
-                                select: "user_handle Profile_image"
+                                select: "user_handle Profile_avtar"
                             }
                         ]);
 
@@ -987,7 +987,7 @@ io.on('connection', (socket) => {
                             },
                             {
                                 path: "adminId",
-                                select: "user_handle Profile_image"
+                                select: "user_handle Profile_avtar"
                             }
                         ]);
 

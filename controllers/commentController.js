@@ -29,7 +29,7 @@ module.exports.loadReviewComments = expressAsyncHandler(async (req, res) => {
                         },
                         {
                             path: "adminId",
-                            select: "user_handle Profile_image"
+                            select: "user_handle Profile_avtar"
                         }
                     ]
                 });
@@ -62,7 +62,7 @@ module.exports.loadReviewComments = expressAsyncHandler(async (req, res) => {
                         },
                         {
                             path: "adminId",
-                            select: "user_handle Profile_image"
+                            select: "user_handle Profile_avtar"
                         }
                     ]
                 });
