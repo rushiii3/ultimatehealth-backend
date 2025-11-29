@@ -35,8 +35,10 @@ const startConversation = expressAsyncHandler(
 
             const conversationId = user.conversationId;
 
-            const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-            const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0)
+            const endOfDay = new Date();
+            endOfDay.setHours(23, 59, 59, 999);
             let messages = await Message.find({
                 conversationId: conversationId,
                 role: 'model',
