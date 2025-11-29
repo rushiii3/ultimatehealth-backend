@@ -54,11 +54,13 @@ const startConversation = expressAsyncHandler(
             }
 
             // 2. Save user message
-            await Message.create({
+           await Message.create({
                 role: "user",
                 text,
                 conversationId
             });
+
+            //await userMsg.save();
             const history = await Message.find({ conversationId }).sort({ _id: 1 });
 
             // 4. Generate assistant reply via Gemini
@@ -70,6 +72,9 @@ const startConversation = expressAsyncHandler(
                 text: reply,
                 conversationId
             });
+
+           // await newMsg.save();
+         //  console.log("saved reply", newMsg);
 
             return res.status(200).json({
                 success: true,
@@ -112,8 +117,9 @@ const loadConversations = expressAsyncHandler(
 
             const messages = await Message.find({
                 conversationId: user.conversationId
-            }).sort({ _id: 1 });
+            });
 
+          console.log("Messages length", messages.length);
             const enhancedMessages = messages.map(msg => {
                 const m = msg.toObject();
 
