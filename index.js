@@ -3,6 +3,8 @@ const expressAsyncHandler = require('express-async-handler');
 
 const compression = require('compression');
 const cors = require('cors');
+const path = require("path");
+
 const cookieParser = require('cookie-parser');
 const { articleReviewNotificationsToUser } = require('./controllers/notifications/notificationHelper');
 const sendArticleFeedbackEmail = require('./controllers/emailservice');
@@ -97,7 +99,7 @@ app.get("/hello", (req, res) => {
     res.send('Hello World');
 });
 app.get('/', (req, res) => {
-   res.sendFile(path.join(__dirname, ".", "public", "home.html"));
+   res.sendFile(path.join(__dirname,  "public", "home.html"));
 });
 
 
