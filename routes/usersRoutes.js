@@ -908,10 +908,90 @@ router.post("/user/verifyOtp", checkOtp);
  */
 router.post("/user/verifypassword", verifyOtpForForgotPassword);
 
+
 /**
- * @deprecated
- */
-router.post("/user/deleteUser", deleteByUser);
+ * @swagger
+ /user/delete:
+  delete:
+    summary: Delete user account
+    description: >
+      Allows an authenticated and verified user to permanently delete their own account.
+      The API accepts authentication token via cookies (`token`) or the `Authorization: Bearer <token>` header.
+      User must provide correct password for identity confirmation.
+    tags:
+      - User
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - password
+            properties:
+              password:
+                type: string
+                example: "userPassword123"
+    responses:
+      "200":
+        description: Account successfully deleted
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: boolean
+                  example: true
+                message:
+                  type: string
+                  example: "account has been removed from database"
+      "401":
+        description: Authorization token missing or invalid password
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Invalid password"
+      "403":
+        description: Email not verified
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Email not verified. Please check your email."
+      "404":
+        description: User not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "User not found"
+      "500":
+        description: Server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Internal server error"
+*/
+router.post("/user/delete", deleteByUser);
+
+router.get("/delete-account", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "delete-account-user.html"));
+});
 
 /**
  * @deprecated

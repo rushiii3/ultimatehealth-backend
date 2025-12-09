@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Health - Empowering Wellness through Knowledge & Community</title>
+    <style>
+        /* --- CSS STYLES --- */
+        :root {
+          
+            --primary-blue: #007bff;
+            --dark-blue: #004080;  
+            --light-bg: #f8f9fa;   
+            --text-color: #343a40;  
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            line-height: 1.6;
+            background-color: white;
+        }
+
+        /* Utility Class for Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* --- HEADER & NAVIGATION --- */
+        .header {
+            background-color: white;
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark-blue);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Logo Image Styling */
+        .logo-icon img {
+            width: 32px; /* Adjusted size for visibility */
+            height: 32px;
+            margin-right: 8px;
+        }
+        
+        /* --- HERO SECTION --- */
+        .hero {
+            background-color: var(--light-bg);
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .hero-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            color: var(--dark-blue);
+            margin-bottom: 15px;
+            font-weight: 800;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #6c757d;
+            max-width: 600px;
+            margin-bottom: 30px;
+        }
+
+        /* --- DOWNLOAD APP SECTION (CTA) & API DOC BUTTON STYLING --- */
+        .download-app, .api-docs-section {
+            background-color: white;
+            padding: 60px 0;
+            text-align: center;
+        }
+        
+        .download-app h2, .api-docs-section h2 {
+            font-size: 2rem;
+            color: var(--dark-blue);
+            margin-bottom: 25px;
+        }
+        
+        .store-buttons a, .api-docs-section a.cta-button {
+            display: inline-block;
+            margin: 10px;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Store button styles (Outline Blue) */
+        .store-buttons a {
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+        }
+        
+        .store-buttons a:hover {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+        
+        /* API Docs Button styles (Solid Primary Blue) */
+        .api-docs-section a.cta-button {
+            background-color: var(--primary-blue);
+            color: white;
+            border: 2px solid var(--primary-blue);
+            font-size: 1.1rem;
+            padding: 15px 35px; /* Larger button */
+        }
+
+        .api-docs-section a.cta-button:hover {
+            background-color: var(--dark-blue);
+            border-color: var(--dark-blue);
+        }
+        
+        /* Optional: Add basic phone image placeholder */
+        .phone-mockup {
+            width: 100%;
+            max-width: 300px;
+            height: 400px;
+            background-color: #e3e7eb;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-top: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        /* --- FEATURES SECTION --- */
+        .features {
+            padding: 60px 0;
+            background-color: white;
+        }
+        
+        .features h2 {
+            text-align: center;
+            color: var(--dark-blue);
+            margin-bottom: 40px;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+        
+        .feature-item {
+            padding: 25px;
+            background: var(--light-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        
+        .feature-item h3 {
+            color: var(--primary-blue);
+            font-size: 1.25rem;
+            margin-top: 15px;
+            min-height: 50px;
+        }
+        
+        /* --- FOOTER --- */
+        .footer {
+            background-color: var(--dark-blue);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .footer a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        /* --- RESPONSIVENESS (Mobile adjustments) --- */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 60px 0;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1rem;
+            }
+            
+            .store-buttons a, .api-docs-section a.cta-button {
+                display: block;
+                margin: 10px auto;
+                max-width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="container nav">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <img src="https://raw.githubusercontent.com/SB2318/UltimateHealth/refs/heads/main/frontend/src/assets/adaptive-icon.png" alt="Ultimate Health Logo">
+                </div>
+                Ultimate Health
+            </a>
+            <nav>
+                <a href="#features" style="margin-right: 15px; text-decoration: none; color: var(--text-color);">Features</a>
+                <a href="#api-docs" style="margin-right: 15px; text-decoration: none; color: var(--text-color);">API</a>
+                <a href="#download" style="text-decoration: none; color: var(--text-color);">Download</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container hero-content">
+            <h1>Empowering Wellness Through Global Community.</h1>
+            <p>Ultimate Health is the first platform that lets you publish health knowledge in your own language, review content, and share podcasts with the world.</p>
+            
+            <div class="store-buttons">
+                <a href="#app-store-link" class="btn-app-store">Download on the App Store</a>
+                <a href="#play-store-link" class="btn-play-store">Get it on Google Play</a>
+            </div>
+            
+            <div class="phone-mockup">
+                [Insert your compelling App Screenshot/Mockup here]
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <h2>Be a Contributor: Core Community Features</h2>
+            <div class="feature-grid">
+                
+                <div class="feature-item">
+                    <h3>🗣️ Multilingual Article Publishing</h3>
+                    <p>Contribute to the global knowledge base by **publishing health articles in your own mother language**, making wellness accessible to everyone.</p>
+                </div>
+                
+                <div class="feature-item">
+                    <h3>✍️ Collaborative Article Improvement</h3>
+                    <p>Help **improve existing health articles** through peer review and editing, ensuring information is accurate, relevant, and easy to understand.</p>
+                </div>
+                
+                <div class="feature-item">
+                    <h3>🎧 Publish Health Podcasts</h3>
+                    <p>Share your voice! Easily **publish podcasts** covering various health topics, connecting with the community through audio content.</p>
+                </div>
+                
+                <div class="feature-item">
+                    <h3>📈 Contribution Analysis</h3>
+                    <p>**Get a detailed analysis of your contributions** (articles, edits, podcasts), showing your impact on the community's overall wellness and knowledge.</p>
+                </div>
+                
+            </div>
+        </div>
+    </section>
+
+    <section class="api-docs-section" id="api-docs">
+        <div class="container">
+            <h2>Developers & Partners</h2>
+            <p>Integrate health data or extend our content platform using our powerful and secure APIs. Build tools and services that leverage the Ultimate Health knowledge base.</p>
+            
+            <a href="https://uhsocial.in/docs/" class="cta-button">See API Documentation</a>
+        </div>
+    </section>
+
+    <section class="download-app" id="download">
+        <div class="container">
+            <h2>Ready to Join the Global Wellness Movement?</h2>
+            <p>Download the app today and start contributing to a healthier world.</p>
+            <div class="store-buttons">
+                <a href="#app-store-link" class="btn-app-store">Download on the App Store</a>
+                <a href="#play-store-link" class="btn-play-store">Get it on Google Play</a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            &copy; 2025 Ultimate Health. All rights reserved. |
+            <a href="#">Privacy Policy</a> |
+            <a href="#">Terms of Service</a>
+        </div>
+    </footer>
+
+</body>
+</html>

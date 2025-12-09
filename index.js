@@ -90,13 +90,14 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(null, {
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
+
 // Test route (can be removed later)
 app.get("/hello", (req, res) => {
     console.log("Hello World");
     res.send('Hello World');
 });
 app.get('/', (req, res) => {
-    res.send("API is working!");
+   res.sendFile(path.join(__dirname, ".", "public", "home.html"));
 });
 
 
