@@ -2,7 +2,7 @@ const express = require("express");
 const authToken = require("../middleware/authentcatetoken"); // user token
 const router = express.Router();
 
-const { startConversation,loadConversations } = require('../controllers/aiChatController');
+const { startConversation,loadConversations, startPPLXConversation } = require('../controllers/aiChatController');
 /**
  * @swagger
  * /gemini/send:
@@ -36,7 +36,7 @@ const { startConversation,loadConversations } = require('../controllers/aiChatCo
  *                 message:
  *                   $ref: '#/components/schemas/Message'
  */
-router.post("/send", authToken, startConversation);
+router.post("/send", authToken, startPPLXConversation);
 
 /**
  * @swagger
