@@ -112,30 +112,7 @@ const server = app.listen(port, () => {
 let io = require('socket.io')(server);
 
 
-/***  
 
-// For Later Purpose
-const onlineUsers = []
-const addNewUser = ({userId, username, socketId})=>{
-
-    const existingUser = onlineUsers.find(user=>user.userId === userId);
-    if(existingUser) return existingUser.socketId;
-    const newUser = {id: crypto.randomUUID(), userId: userId, username: username, socketId: socketId};
-    onlineUsers.push(newUser);
-}
-
-/** Remove User 
-
-const removeUser = (socketId)=>{
-    onlineUsers = onlineUsers.filter((user)=> user.socketId !== socketId);
-}
-
-/** Get User 
-const getUser = (userId)=>{
-    return onlineUsers.find(user=>user.userId === userId);
-}
-
-*/
 
 io.on('connection', (socket) => {
 
