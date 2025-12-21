@@ -3,6 +3,11 @@
 The repository is  the core engine powering the UltimateHealth platform. This backend service provides secure, and efficient APIs to support a seamless experience for users accessing trustable health resources and expert insights, built with Node js  and Express.✅💡. It uses MongoDB for data storage and JWT for secure authentication. 
 
 
+### Important Phase II Development:
+
+The backend already has a solid structure and follows an event-driven approach.
+Instead of a full rewrite, phase two focuses on optimizing controllers by extracting database logic, security responsibilities, configuration handling, and shared utilities.
+While it’s not a full **Spring Boot implementation**, the architectural principles and overall vibe are clearly inspired by it.
 
 ---
 
