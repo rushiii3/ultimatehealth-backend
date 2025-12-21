@@ -1,5 +1,5 @@
-const User = require("../models/UserModel");
-const UnverifiedUser = require("../models/UnverifiedUserModel");
+const User = require("../../models/UserModel");
+const UnverifiedUser = require("../../models/UnverifiedUserModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
@@ -56,9 +56,11 @@ const createUnverifiedUser = async ({
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Generate a verification token
+
     const verificationToken = jwt.sign({ email }, jwt_secret, {
         expiresIn: "1h",
     });
+
     const newUser = new UnverifiedUser({
         user_name: user_name,
         user_handle: user_handle,
@@ -180,7 +182,7 @@ const getPublicProfile = async (userId, userHandle) => {
             .exec();
     }
 
-    if(!user) return null;
+    if (!user) return null;
     const {
         password,
         refreshToken,
@@ -203,6 +205,65 @@ const checkExistingUser = async ({ email, user_handle }) => {
     return exitingEmail || existingUserHandle || existingUnverifiedEmail || existingUnverifiedByHandle;
 }
 
+const isSamePassword = async (userPassword, newPassword) => {
+    return await bcrypt.compare(userPassword, newPassword);
+}
+
+const updateUserPassword = async (user, newPassword) => {
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+}
+
+const updateUserOtp = async (user, otp, otpExpires) => {
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+}
+
+const loginUser = async (user, refreshToken, fcmToken) => {
+
+    user.refreshToken = refreshToken;
+    user.fcmToken = fcmToken;
+    await user.save();
+}
+
+const deleteUserByEmail = async (email) => {
+    await User.deleteOne({ email: email });
+}
+
+const followUser = async (userId, targetUserId) => {
+
+    const user = await User.findById(userId);
+    const userToFollow = await User.findById(targetUserId);
+
+    user.followings.push(userToFollow._id);
+    user.followingCount += 1;
+    await user.save();
+
+    userToFollow.followers.push(user._id);
+    userToFollow.followerCount += 1;
+    await userToFollow.save();
+}
+
+const unfollowUser = async (userId, targetUserId) => {
+
+    const user = await User.findById(userId);
+    const userToFollow = await User.findById(targetUserId);
+
+    await user.followings.pull(userToFollow._id);
+    user.followingCount = Math.max(0, user.followingCount - 1);
+    await user.save();
+
+    await userToFollow.followers.pull(user._id);
+    userToFollow.followerCount = Math.max(0, userToFollow.followerCount - 1);
+    await userToFollow.save();
+}
 module.exports = {
     createUser,
     createUnverifiedUser,
@@ -214,7 +275,14 @@ module.exports = {
     findUserById,
     checkExistingUser,
     getMyProfile,
-    getPublicProfile
+    getPublicProfile,
+    isSamePassword,
+    updateUserPassword,
+    updateUserOtp,
+    loginUser,
+    deleteUserByEmail,
+    followUser,
+    unfollowUser
 }
 // Left
 // 1. Update User

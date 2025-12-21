@@ -294,7 +294,7 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
       }
 
       const otp = generateOTP();
-      const otpExpires = Date.now() + 10 * 60 * 60; // 10 minutes
+      const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
       if (user) {
         user.otp = otp;
@@ -650,7 +650,6 @@ module.exports.deleteByAdmin = expressAsyncHandler(
   }
 )
 // follow a user
-
 module.exports.follow = expressAsyncHandler(
   async (req, res) => {
     try {
@@ -749,9 +748,7 @@ module.exports.follow = expressAsyncHandler(
     }
   }
 )
-
 // Get Follower
-
 module.exports.getFollowers = expressAsyncHandler(
   async (req, res) => {
     const userId = req.userId;
@@ -775,7 +772,6 @@ module.exports.getFollowers = expressAsyncHandler(
     return res.status(200).json({ followers: author.followers });
   }
 )
-
 // GET followings
 module.exports.getFollowings = expressAsyncHandler(
   async (req, res) => {

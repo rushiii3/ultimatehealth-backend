@@ -2478,6 +2478,25 @@ const sendUnblockUserMail = async (email, username) => {
   });
 };
 
+const sendOtpMail = async (email, otp) => {
+  const mailOptions = {
+    from: process.env.EMAIL,
+    to: email,
+    subject: "Password Reset OTP",
+    text: `Your OTP for password reset is: ${otp}`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error("Error sending email:", error);
+      return null;
+    }
+    return true;
+  });
+
+  return true;
+}
+
 
 
 module.exports = {
@@ -2506,7 +2525,8 @@ module.exports = {
   sendRestoreRequestReceivedMail,
   sendRestoreRequestDisapprovedMail,
   sendPodcastPublishedEmail,
-  sendPodcastDiscardEmail
+  sendPodcastDiscardEmail,
+  sendOtpMail
 };
 
 
