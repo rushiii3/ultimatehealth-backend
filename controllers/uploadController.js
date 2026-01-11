@@ -180,7 +180,7 @@ const uploadFile = async (req, res) => {
             const params = {
                 Bucket: 'ultimate-health-new',
                 Key: `${file.originalname}`, // Keep original filename and extension
-                Body: fs.createReadStream(file.path),
+               // Body: fs.createReadStream(file.path),
                 ContentType: file.mimetype
             };
 
