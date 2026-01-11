@@ -189,6 +189,13 @@ const uploadFile = async (req, res) => {
             // handle large file size 
             const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
+            await axios.put(uploadUrl, fs.createReadStream(file.path), {
+                headers: {
+                    'Content-Type': file.mimetype,
+                },
+                maxBodyLength: Infinity,
+            });
+
             fs.unlink(file.path, (err) => {
                 if (err) console.error('Unlink error', err);
             });
@@ -419,13 +426,13 @@ const getIMPFile = expressAsyncHandler(
 
                 console.log("Enter article")
                 result = await getHTMLFileContent('content', articleRecordId);
-                
+
             } else {
-               console.log("Enter record id")
+                console.log("Enter record id")
                 result = await getHTMLFileContent('edit_requests', recordid);
             }
 
-            
+
             return res.status(200).json(result);
         } catch (err) {
             console.log("Error getting file from pocketbase:", err);
@@ -455,14 +462,14 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
                 improvementRecord = await pb.collection('edit_requests').getOne(record_id);
             } catch (err) {
                 console.log(err);
-               return res.status(200).json({ message: 'Improvement record has no HTML file to publish' });
+                return res.status(200).json({ message: 'Improvement record has no HTML file to publish' });
             }
 
             if (!improvementRecord.edited_html_file) {
                 return res.status(400).json({ message: 'Improvement record has no HTML file to publish' });
             }
 
-    
+
             const fileUrl = pb.files.getUrl(improvementRecord, improvementRecord.edited_html_file, { download: true });
             const response = await axios.get(fileUrl, { responseType: 'stream' });
 
@@ -473,7 +480,7 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
                 writer.on('error', reject);
             });
 
-  
+
             const formData = new FormData();
             const file = await fileFromPath(tempFilePath);
             formData.append('html_file', file);
@@ -482,7 +489,7 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
 
             await pb.collection('edit_requests').delete(record_id);
 
-    
+
             fs.unlinkSync(tempFilePath);
 
             return res.status(200).json({
@@ -520,14 +527,14 @@ const deleteImprovementRecordFromPocketbase = expressAsyncHandler(
             const pb = await getPocketbaseClient();
             await authenticateAdmin(pb);
 
-            
+
             let improvementRecord;
             try {
                 improvementRecord = await pb.collection('edit_requests').getOne(record_id);
             } catch (err) {
-              return;
+                return;
             }
-           // const improvementRecord = await pb.collection('edit_requests').getOne(record_id);
+            // const improvementRecord = await pb.collection('edit_requests').getOne(record_id);
 
             if (!improvementRecord) {
                 return res.status(404).json({ message: 'Record not found' });
