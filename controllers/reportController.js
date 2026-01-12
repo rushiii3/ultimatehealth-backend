@@ -726,7 +726,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           }
 
           // send warn mail to convict, and resolve mail to victim 
-          sendWarningMailToConvict(convict.email, details, reportType, report.reasonId.reason, Math.max(0, convict.strikeCount - 1));
+          sendWarningMailToConvict(convict.email, details, reportType, report.reasonId.reason, Math.max(0, convict.strikeCount));
           sendResolvedMailToVictim(victim.email, details, reportType, action);
           // Increase admin contribution count
           const aggregate = new AdminAggregate({
