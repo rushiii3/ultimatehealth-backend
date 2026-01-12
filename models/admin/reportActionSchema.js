@@ -1,22 +1,23 @@
 const mongoose = require('mongoose');
 const {Schema} = require('mongoose');
 
-const reportActionEnum = {
-    PENDING:"Pending",                       
-    RESOLVED: "Resolved",             
-    DISMISSED: "Dismissed",           
-    WARN_CONVICT: "User Warned",            
-    REMOVE_CONTENT: "Content Removed",       
-    EDIT_CONTENT: "Content Edited",         
-    RESTORE_CONTENT: "Content Restored",      
-    BLOCK_CONVICT: "User Blocked",  
-    BAN_CONVICT: "User Banned",        
-    ESCALATED: "Escalated",          
-    INVESTIGATION: "Investigation Start",        
-    IGNORE: "Ignored",
-    CONVICT_REQUEST_TO_RESTORE_CONTENT: "CONVICT_REQUEST_TO_RESTORE_CONTENT",   
-    CONVICT_REQUEST_DISAPPROVED : "CONVICT_REQUEST_DISAPPROVED",
+const reportActionEnum ={
+  PENDING : 'Pending',
+  RESOLVED : 'Resolve',
+  DISMISSED : 'Dismiss',
+  WARN_CONVICT : 'Warn Convict',
+  REMOVE_CONTENT : 'Remove Content',
+  EDIT_CONTENT : 'Request to Edit Content',
+  RESTORE_CONTENT : 'Restore the remove content (only applicable if content was removed)',
+  BLOCK_CONVICT : 'Block User',
+  BAN_CONVICT : 'Ban User',
+  ESCALATED : 'Escalate the Report',
+  INVESTIGATION : 'Investigation Start',
+  IGNORE : 'Ignore Report',
+  CONVICT_REQUEST_TO_RESTORE_CONTENT : 'CONVICT_REQUEST_TO_RESTORE_CONTENT',
+  CONVICT_REQUEST_DISAPPROVED : 'CONVICT_REQUEST_DISAPPROVED',
 };
+
 const reportActionSchema = new Schema({
 
     admin_id:{
@@ -76,7 +77,7 @@ const reportActionSchema = new Schema({
         default: null,
     }
    
-})
+});
 
 const ReportAction = mongoose.model('ReportAction', reportActionSchema);
 
