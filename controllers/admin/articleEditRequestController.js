@@ -728,7 +728,7 @@ async function unassignImprovements() {
 
     try {
         const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 30);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         const requests = await EditRequest.find({
             status: {
