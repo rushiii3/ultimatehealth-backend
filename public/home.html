@@ -45,6 +45,46 @@
          height: 52px;
          display: block;            
          }
+
+         .nav-links {
+    display: flex;
+    list-style: none;
+    gap: 25px;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: 0.3s;
+}
+
+.nav-links a:hover {
+    color: var(--primary-blue);
+}
+
+/* Download button style in nav */
+.nav-btn-sm {
+    background: var(--primary-blue);
+    color: white !important;
+    padding: 8px 18px;
+    border-radius: 6px;
+}
+
+.nav-btn-sm:hover {
+    background: var(--dark-blue);
+}
+
+/* Mobile responsive ke liye chota sa fix */
+@media (max-width: 768px) {
+    .nav-links {
+        display: none; /* Mobile par chhupane ke liye, ya aap ise hamburger menu bana sakte hain */
+    }
+}
          /* --- HERO SECTION --- */
          .hero {
          background-color: var(--light-bg);
@@ -487,16 +527,25 @@
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
    </head>
    <body>
-      <header class="header">
-         <div class="container nav">
-            <a href="#" class="logo">
-               <div class="logo-icon">
-                  <img src="https://raw.githubusercontent.com/SB2318/UltimateHealth/refs/heads/main/frontend/src/assets/adaptive-icon.png" alt="Ultimate Health Logo">
-               </div>
-               Ultimate-Health
-            </a>
+     <header class="header">
+   <div class="container nav">
+      <a href="#" class="logo">
+         <div class="logo-icon">
+            <img src="https://raw.githubusercontent.com/SB2318/UltimateHealth/refs/heads/main/frontend/src/assets/adaptive-icon.png" alt="Ultimate Health Logo">
          </div>
-      </header>
+         Ultimate-Health
+      </a>
+
+      <ul class="nav-links">
+         <li><a href="#features">Features</a></li>
+         <li><a href="#screenshots">Screenshots</a></li>
+         <li><a href="#programs">Programs</a></li>
+         <li><a href="https://uhsocial.in/docs" target="_blank">Documentation</a></li>
+         <li><a href="#contact">Contact</a></li>
+         <li><a href="#downloads" class="nav-btn-sm">Downloads</a></li>
+      </ul>
+   </div>
+</header>
       <section class="hero">
          <div class="container hero-content">
             <h1>Empowering Wellness Through Global Community.</h1>
@@ -504,7 +553,7 @@
          </div>
       </section>
       <!-- ================= DOWNLOAD – PLAY STORE ================= -->
-      <section>
+      <section id="downloads">
          <div class="container">
             <h2>Download from Play Store</h2>
             <div class="store-buttons">
@@ -524,7 +573,7 @@
          </div>
       </section>
       <!-- ================= SCREENSHOTS ================= -->
-      <section>
+      <section id="screenshots">
          <div class="container">
             <h2>App Screenshots</h2>
             <!-- UltimateHealth – OPEN BY DEFAULT -->
@@ -660,7 +709,7 @@
          </div>
       </section>
       <!-- ================= FEATURES (EXISTING) ================= -->
-      <section>
+      <section id="features">
          <div class="container">
             <h2>Be a Contributor: Core Community Features</h2>
             <div class="feature-grid">
@@ -719,7 +768,7 @@
          </div>
       </section>
       <!-- ================= PARTICIPATED PROGRAMS ================= -->
-      <section style="background:#f8f9fa">
+      <section style="background:#f8f9fa" id="programs">
          <div class="container">
             <p class="center">We actively collaborate with community, and open-source initiatives.</p>
             <section style="background-color: var(--white);">
