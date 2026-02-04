@@ -376,8 +376,9 @@ const uploadHTMLToPocketBase = expressAsyncHandler(
 
       // cleanup
       fs.unlinkSync(filePath);
-      fs.unlinkSync(uploadedFile.path);
-
+      if(uploadedFile.path){
+        fs.unlinkSync(uploadedFile.path);
+      }
       return res.status(200).json({
         message: 'File uploaded successfully',
         recordId: record.id,
