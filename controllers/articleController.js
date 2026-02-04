@@ -133,7 +133,7 @@ module.exports.getAllArticles = expressAsyncHandler(
         const totalPages = Math.ceil(totalArticles / Number(limit));
         res.status(200).json({ articles, totalPages });
       } else {
-        res.status(200).json({ articles : articles });
+        res.status(200).json({ articles: articles });
       }
     } catch (error) {
       res
@@ -247,8 +247,8 @@ module.exports.getAllArticlesForUser = expressAsyncHandler(
           return;
         }
         res.status(200).json({ articles, totalPages });
-      
-       } else {
+
+      } else {
         res.status(200).json({ articles: articles });
       }
 
@@ -271,17 +271,17 @@ module.exports.getAllImprovementsForUser = expressAsyncHandler(
     try {
 
       const skip = (Number(page) - 1) * parseInt(limit);
-      let query = {user_id: userId};
+      let query = { user_id: userId };
       let articleQuery = query;
 
-      if(Number(status) === 1){
+      if (Number(status) === 1) {
         articleQuery = {
           ...query,
           status: statusEnum.statusEnum.PUBLISHED
         }
       }
 
-      if(Number(status) === 2){
+      if (Number(status) === 2) {
         articleQuery = {
           ...query,
           status: {
@@ -295,7 +295,7 @@ module.exports.getAllImprovementsForUser = expressAsyncHandler(
         }
       }
 
-      if(Number(status) === 3){
+      if (Number(status) === 3) {
         articleQuery = {
           ...query,
           status: statusEnum.statusEnum.DISCARDED
@@ -334,9 +334,9 @@ module.exports.getAllImprovementsForUser = expressAsyncHandler(
           return;
         }
         res.status(200).json({ articles, totalPages });
-      
-       } else {
-        res.status(200).json({ articles: articles});
+
+      } else {
+        res.status(200).json({ articles: articles });
       }
     } catch (err) {
       console.log(err);
@@ -669,12 +669,42 @@ module.exports.addNewTag = expressAsyncHandler(
   }
 )
 
-// Get all tags
+// Get all tags as per used in the last articles
 module.exports.getAllTags = expressAsyncHandler(
   async (req, res) => {
     try {
-      const tags = await ArticleTag.find().sort({ id: -1 });
-      res.status(200).json(tags);
+      const articles = await Article.find(
+        {
+          status: statusEnum.statusEnum.PUBLISHED
+        }
+      ).sort({
+        lastUpdated: -1
+      }).select('tags')
+        .lean();
+
+      const tagIds = [];
+
+      // constant operation, at most 5 tags in the inner loop
+      articles.forEach(article => {
+
+        article.tags.forEach(tag => {
+          if (!tagIds.some(id => id.toString() === tagId.toString())) {
+            tagIds.push(tag);
+          }
+        })
+      });
+
+      //  Fetch tags
+      const tags = await ArticleTag.find({
+        _id: { $in: tagIds }
+      });
+
+      //  Preserve order
+      const orderedTags = tagIds.map(id =>
+        tags.find(tag => tag._id.toString() === id.toString())
+      );
+      //  const tags = await ArticleTag.find().sort({ id: -1 });
+      res.status(200).json(orderedTags.filter(Boolean));
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
