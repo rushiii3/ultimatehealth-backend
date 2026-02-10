@@ -18,7 +18,7 @@ const adminAuthenticateToken = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const admin = await Admin.findById(decoded.userId);
     if (!admin || !admin.isVerified) {
-      return res.status(403).json({ error: 'Email not verified' });
+      return res.status(403).json({ error: 'Either Email not verified or Admin not found' });
     } else {
       req.userId = admin._id;
       next();

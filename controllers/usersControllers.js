@@ -275,6 +275,36 @@ module.exports.getUserProfile = expressAsyncHandler(
   }
 )
 
+module.exports.getTokenStatus = expressAsyncHandler(
+
+  async (req, res) => {
+
+    const token = req.cookies.accessToken || req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(200).json({ isValid: false, message: "Token is missing" });
+    }
+    try {
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const now = Math.floor(Date.now() / 1000);
+      if (decoded.exp && decoded.exp < now) {
+        return res.status(200).json({
+          isValid: false,
+          message: "Token is expired",
+        });
+      }
+      const tokenData = await BlacklistedToken.findOne({ token });
+      if (tokenData) {
+        return res.status(200).json({ isValid: false, message: "Token is blacklisted" });
+      } else {
+        return res.status(200).json({ isValid: true, message: "Token is valid" });
+      }
+    } catch (err) {
+      return res.status(200).json({ isValid: false, message: "Token is invalid", error: err.message });
+    }
+  }
+)
 
 
 module.exports.sendOTPForForgotPassword = expressAsyncHandler(

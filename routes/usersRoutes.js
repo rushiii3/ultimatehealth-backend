@@ -6,6 +6,7 @@ const path = require("path");
 const {
   register,
   login,
+  getTokenStatus,
   logout,
   sendOTPForForgotPassword,
   verifyOtpForForgotPassword,
@@ -44,6 +45,7 @@ router.get("/hello", (req, res) => {
   res.send("Hello World");
 });
 
+router.get("/tokenstatus", getTokenStatus);
 // Register New User
 
 /**
