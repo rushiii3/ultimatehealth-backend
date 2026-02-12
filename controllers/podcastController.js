@@ -9,6 +9,7 @@ const PlayList = require("../models/playlistSchema");
 const AudioLikeAggregate = require('../models/events/audioLikeEventSchema');
 const AudioViewAggregate = require('../models/events/audioViewEventSchema');
 const { deleteFileFn } = require('./uploadController');
+const { sendPodcastForReviewEmail } = require("./emailservice");
 
 const mongoose = require('mongoose');
 
@@ -366,6 +367,7 @@ const createPodcast = expressAsyncHandler(
             podcast.mentionedUsers.push(user._id);
 
             await podcast.save();
+            sendPodcastForReviewEmail(user.email, title);
             res.status(201).json({ message: 'Podcast created successfully.', podcast: podcast });
         } catch (err) {
             console.log(err);

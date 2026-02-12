@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
-const { verifyToken, verifyUser } = require("../middleware/authMiddleware");
-const { ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION, PODCAST_PUBLISH, PODCAST_DISCARDED_FROM_SYSTEM, PODCAST_DISCARDED } = require("../utils/emailBody");
+//const { verifyToken, verifyUser } = require("../middleware/authMiddleware");
+//const { ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION, PODCAST_PUBLISH, PODCAST_DISCARDED_FROM_SYSTEM, PODCAST_DISCARDED } = require("../utils/emailBody");
 const jwt = require('jsonwebtoken');
 const UnverifiedUser = require("../models/UnverifiedUserModel");
 const User = require("../models/UserModel");
@@ -110,8 +110,6 @@ const sendContributorVerificationEmail = (email, password) => {
   });
 };
 
-
-
 const Sendverifymail = async (req, res) => {
   const { email, token, isAdmin } = req.body;
 
@@ -142,7 +140,6 @@ const Sendverifymail = async (req, res) => {
 
   res.status(200).json({ message: 'Verification email sent' });
 };
-
 
 const resendVerificationEmail = async (req, res) => {
   const { email, isAdmin } = req.body;
@@ -318,9 +315,7 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-
 const sendArticleFeedbackEmail = (email, feedback, title) => {
-
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -388,12 +383,12 @@ const sendArticleFeedbackEmail = (email, feedback, title) => {
                 <body>
                     <div class="container">
                         <div class="header">
-                            <h1> Feedback for "${title}"</h1>
+                            <h1> Feedback for ${title}</h1>
                         </div>
                         <div class="content">
                             <p>Dear Author,</p>
                             <p>I hope this message finds you well!</p>
-                            <p>We have reviewed your article titled "<strong>${title}</strong>" and would like to provide some feedback:</p>
+                            <p>We have reviewed your article titled <strong>${title}</strong> and would like to provide some feedback:</p>
 
                             <p><strong>Feedback:</strong></p>
                             <p>${feedback}</p>
@@ -420,6 +415,397 @@ const sendArticleFeedbackEmail = (email, feedback, title) => {
       console.error('Error sending email:', err);
     } else {
       console.log('Verification email sent:', info.response);
+    }
+  });
+};
+
+const sendArticleForReviewEmail = (email, title) => {
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Your Article ${title} Has Been Submitted for Review`,
+    html: `<html>
+                <head>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            color: #333;
+                            line-height: 1.6;
+                            margin: 0;
+                            padding: 0;
+                            background-color: #f4f7fc;
+                        }
+                        .container {
+                            width: 80%;
+                            margin: 0 auto;
+                            background-color: #ffffff;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        }
+                        .header {
+                            background-color: #00BFFF;
+                            color: white;
+                            padding: 15px;
+                            border-radius: 8px 8px 0 0;
+                            text-align: center;
+                        }
+                        .header h1 {
+                            font-size: 24px;
+                            margin: 0;
+                        }
+                        .content {
+                            padding: 20px;
+                        }
+                        .footer {
+                            text-align: center;
+                            font-size: 14px;
+                            color: #777;
+                            padding: 10px;
+                        }
+                        .note {
+                            background-color: #e3f2fd;
+                            padding: 10px;
+                            border-left: 5px solid #2196f3;
+                            margin-top: 20px;
+                        }
+                        .status {
+                            background-color: #fff3cd;
+                            padding: 10px;
+                            border-left: 5px solid #ffc107;
+                            margin-top: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Article Submitted for Review</h1>
+                        </div>
+                        <div class="content">
+                            <p>Dear Author,</p>
+                            <p>Thank you for submitting your article titled <strong>${title}</strong>.</p>
+
+                            <div class="status">
+                                <p><strong>Status:</strong> Your article is currently under review by our editorial team.</p>
+                            </div>
+
+                            <p>Our team will carefully evaluate your submission for quality, relevance, and accuracy. This process typically takes 2–4 working days.</p>
+
+                            <div class="note">
+                                <p><strong>What’s Next?</strong> You will receive an email notification once the review process is complete — whether it is approved, requires revisions, or not selected.</p>
+                            </div>
+
+                            <p>We appreciate your contribution and look forward to publishing high-quality content from talented writers like you.</p>
+                        </div>
+                        <div class="footer">
+                            <p>Best regards,<br>UltimateHealth Team</p>
+                        </div>
+                    </div>
+                </body>
+            </html>`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Review submission email sent:', info.response);
+    }
+  });
+};
+
+const sendPodcastForReviewEmail = (email, title) => {
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Your Podcast ${title} Has Been Submitted for Review`,
+    html: `<html>
+                <head>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            color: #333;
+                            line-height: 1.6;
+                            margin: 0;
+                            padding: 0;
+                            background-color: #f4f7fc;
+                        }
+                        .container {
+                            width: 80%;
+                            margin: 0 auto;
+                            background-color: #ffffff;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        }
+                        .header {
+                            background-color: #00BFFF;
+                            color: white;
+                            padding: 15px;
+                            border-radius: 8px 8px 0 0;
+                            text-align: center;
+                        }
+                        .header h1 {
+                            font-size: 24px;
+                            margin: 0;
+                        }
+                        .content {
+                            padding: 20px;
+                        }
+                        .footer {
+                            text-align: center;
+                            font-size: 14px;
+                            color: #777;
+                            padding: 10px;
+                        }
+                        .note {
+                            background-color: #e3f2fd;
+                            padding: 10px;
+                            border-left: 5px solid #2196f3;
+                            margin-top: 20px;
+                        }
+                        .status {
+                            background-color: #fff3cd;
+                            padding: 10px;
+                            border-left: 5px solid #ffc107;
+                            margin-top: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Podcast Submitted for Review</h1>
+                        </div>
+                        <div class="content">
+                            <p>Dear Creator,</p>
+                            <p>Thank you for submitting your podcast titled <strong>${title}</strong>.</p>
+
+                            <div class="status">
+                                <p><strong>Status:</strong> Your podcast is currently under review by our editorial team.</p>
+                            </div>
+
+                            <p>Our team will carefully evaluate your submission for audio quality, content accuracy, and relevance. This process typically takes 2–4 working days.</p>
+
+                            <div class="note">
+                                <p><strong>What’s Next?</strong> You will receive an email notification once the review process is complete — whether it is approved, requires revisions, or not selected.</p>
+                            </div>
+
+                            <p>We appreciate your contribution and look forward to sharing impactful audio content with our community.</p>
+                        </div>
+                        <div class="footer">
+                            <p>Best regards,<br>UltimateHealth Team</p>
+                        </div>
+                    </div>
+                </body>
+            </html>`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Podcast review submission email sent:', info.response);
+    }
+  });
+};
+
+const pickPodcastMail = (email, title) => {
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Your Podcast ${title} Has Been Picked for Review`,
+    html: `<html>
+                <head>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            color: #333;
+                            line-height: 1.6;
+                            margin: 0;
+                            padding: 0;
+                            background-color: #f4f7fc;
+                        }
+                        .container {
+                            width: 80%;
+                            margin: 0 auto;
+                            background-color: #ffffff;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        }
+                        .header {
+                            background-color: #00BFFF;
+                            color: white;
+                            padding: 15px;
+                            border-radius: 8px 8px 0 0;
+                            text-align: center;
+                        }
+                        .header h1 {
+                            font-size: 24px;
+                            margin: 0;
+                        }
+                        .content {
+                            padding: 20px;
+                        }
+                        .footer {
+                            text-align: center;
+                            font-size: 14px;
+                            color: #777;
+                            padding: 10px;
+                        }
+                        .status {
+                            background-color: #e8f5e9;
+                            padding: 10px;
+                            border-left: 5px solid #28a745;
+                            margin-top: 20px;
+                        }
+                        .note {
+                            background-color: #fff3cd;
+                            padding: 10px;
+                            border-left: 5px solid #ffc107;
+                            margin-top: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Podcast Picked for Review</h1>
+                        </div>
+                        <div class="content">
+                            <p>Dear Creator,</p>
+                            <p>Great news! 🎉</p>
+                            <p>Your podcast titled <strong>${title}</strong> has been picked by our editorial team for detailed review.</p>
+
+                            <div class="status">
+                                <p><strong>Status Update:</strong> Your podcast is now actively being reviewed by one of our editors.</p>
+                            </div>
+
+                            <p>This means your submission has successfully passed the initial screening stage and is moving forward in our publishing workflow.</p>
+
+                            <div class="note">
+                                <p><strong>Next Step:</strong> You will receive further updates once the review process is complete. Please keep an eye on your email.</p>
+                            </div>
+
+                            <p>Thank you for contributing your valuable content to UltimateHealth. We truly appreciate your effort and creativity.</p>
+                        </div>
+                        <div class="footer">
+                            <p>Best regards,<br>UltimateHealth Team</p>
+                        </div>
+                    </div>
+                </body>
+            </html>`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Pick podcast email sent:', info.response);
+    }
+  });
+};
+
+
+const pickArticleMail = (email, title) => {
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Your Article ${title} Has Been Picked for Review`,
+    html: `<html>
+                <head>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            color: #333;
+                            line-height: 1.6;
+                            margin: 0;
+                            padding: 0;
+                            background-color: #f4f7fc;
+                        }
+                        .container {
+                            width: 80%;
+                            margin: 0 auto;
+                            background-color: #ffffff;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        }
+                        .header {
+                            background-color: #00BFFF;
+                            color: white;
+                            padding: 15px;
+                            border-radius: 8px 8px 0 0;
+                            text-align: center;
+                        }
+                        .header h1 {
+                            font-size: 24px;
+                            margin: 0;
+                        }
+                        .content {
+                            padding: 20px;
+                        }
+                        .footer {
+                            text-align: center;
+                            font-size: 14px;
+                            color: #777;
+                            padding: 10px;
+                        }
+                        .status {
+                            background-color: #e8f5e9;
+                            padding: 10px;
+                            border-left: 5px solid #28a745;
+                            margin-top: 20px;
+                        }
+                        .note {
+                            background-color: #fff3cd;
+                            padding: 10px;
+                            border-left: 5px solid #ffc107;
+                            margin-top: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Article Picked for Review</h1>
+                        </div>
+                        <div class="content">
+                            <p>Dear Author,</p>
+                            <p>Good news! 🎉</p>
+                            <p>Your article titled <strong>${title}</strong> has been picked by our editorial team for detailed review.</p>
+
+                            <div class="status">
+                                <p><strong>Status Update:</strong> Your article is now actively being reviewed by one of our editors.</p>
+                            </div>
+
+                            <p>This means your submission has passed the initial screening and is progressing in our publishing workflow.</p>
+
+                            <div class="note">
+                                <p><strong>Next Step:</strong> You will be notified once the review process is complete. Please keep an eye on your email for updates.</p>
+                            </div>
+
+                            <p>Thank you for contributing to UltimateHealth. We truly appreciate your effort and creativity.</p>
+                        </div>
+                        <div class="footer">
+                            <p>Best regards,<br>UltimateHealth Team</p>
+                        </div>
+                    </div>
+                </body>
+            </html>`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Pick article email sent:', info.response);
     }
   });
 };
@@ -498,7 +884,7 @@ const sendArticlePublishedEmail = (email, articleLink, title) => {
             </div>
             <div class="content">
                 <p>Dear Author,</p>
-                <p>We are excited to inform you that your article titled "<strong>${title}</strong>" has been successfully published on UltimateHealth!</p>
+                <p>We are excited to inform you that your article titled <strong>${title}</strong> has been successfully published on UltimateHealth!</p>
 
                 <p>Your work is now live for our readers to enjoy, and we are thrilled to share your insights with the community. We sincerely appreciate the effort you’ve put into this article and hope it resonates with many!</p>
 
@@ -626,7 +1012,6 @@ const sendPodcastPublishedEmail = (email, podcastLink, title) => {
 };
 
 const sendPodcastDiscardEmail = (email, status, title, reason) => {
-
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -781,11 +1166,11 @@ const sendPodcastDiscardEmail = (email, status, title, reason) => {
   <body>
       <div class="container">
           <div class="header">
-              <h1>Podcast Discarded: "${title}"</h1>
+              <h1>Podcast Discarded: ${title}</h1>
           </div>
           <div class="content">
               <p>Dear Author,</p>
-              <p>We regret to inform you that your podcast titled "<strong>${title}</strong>" has been discarded from our review process due to the lack of action taken within the required review period of 30 days.</p>
+              <p>We regret to inform you that your podcast titled <strong>${title}</strong> has been discarded from our review process due to the lack of action taken within the required review period of 30 days.</p>
 
               <p>Our review system automatically discards contents that do not receive feedback or revisions within the set time frame. Unfortunately, we did not receive any updates or revisions within the 30-day deadline.</p>
 
@@ -814,8 +1199,8 @@ const sendPodcastDiscardEmail = (email, status, title, reason) => {
     }
   });
 };
-const sendArticleDiscardEmail = (email, status, title, reason) => {
 
+const sendArticleDiscardEmail = (email, status, title, reason) => {
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -883,11 +1268,11 @@ const sendArticleDiscardEmail = (email, status, title, reason) => {
   <body>
       <div class="container">
           <div class="header">
-              <h1>Article Discarded: "${title}"</h1>
+              <h1>Article Discarded: ${title}</h1>
           </div>
           <div class="content">
               <p>Dear Author,</p>
-              <p>We regret to inform you that your article titled "<strong>${title}</strong>" has been discarded from our review process due to the lack of action taken within the required review period of 30 days.</p>
+              <p>We regret to inform you that your article titled <strong>${title}</strong> has been discarded from our review process due to the lack of action taken within the required review period of 30 days.</p>
 
               <p>Our review system automatically discards articles that do not receive feedback or revisions within the set time frame. Unfortunately, we did not receive any updates or revisions within the 30-day deadline.</p>
 
@@ -968,11 +1353,11 @@ const sendArticleDiscardEmail = (email, status, title, reason) => {
   <body>
       <div class="container">
           <div class="header">
-              <h1>Article Discarded: "${title}"</h1>
+              <h1>Article Discarded: ${title}</h1>
           </div>
           <div class="content">
               <p>Dear Author,</p>
-              <p>We regret to inform you that your article titled "<strong>${title}</strong>" has been discarded from our review process.</p>
+              <p>We regret to inform you that your article titled <strong>${title}</strong> has been discarded from our review process.</p>
 
               <p><strong>Reason for Discard:</strong> ${reason} </p>
 
@@ -1130,7 +1515,7 @@ const sendMailOnEditRequestApproval = (email, title) => {
             <div class="container">
                 <h1>Improvement Request Approved</h1>
                 <p>Dear Author,</p>
-                <p>Your edit request for the article titled <span class="highlight">"${title}"</span> has been accepted.</p>
+                <p>Your edit request for the article titled <span class="highlight">${title}</span> has been accepted.</p>
                 <p>Please make the necessary improvements within <span class="highlight">4 days</span> from the date of this email.</p>
                 <p>If you have any questions or need clarification on the required changes, feel free to reach out.</p>
                 <div class="footer">
@@ -2560,7 +2945,7 @@ const sendOtpMail = async (email, otp) => {
     text: `Your OTP for password reset is: ${otp}`,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
+  transporter.sendMail(mailOptions, (error) => {
     if (error) {
       console.error("Error sending email:", error);
       return null;
@@ -2579,6 +2964,9 @@ module.exports = {
   Sendverifymail,
   resendVerificationEmail,
   sendArticleFeedbackEmail,
+  pickArticleMail,
+  pickPodcastMail,
+  sendArticleForReviewEmail,
   sendArticlePublishedEmail,
   sendArticleDiscardEmail,
   sendMailArticleDiscardByAdmin,
@@ -2599,6 +2987,7 @@ module.exports = {
   sendRestoreRequestReceivedMail,
   sendRestoreRequestDisapprovedMail,
   sendPodcastPublishedEmail,
+  sendPodcastForReviewEmail,
   sendPodcastDiscardEmail,
   sendOtpMail,
   sendContributorVerificationEmail

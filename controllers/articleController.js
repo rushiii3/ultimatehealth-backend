@@ -6,6 +6,7 @@ const EditRequest = require('../models/admin/articleEditRequestModel');
 const ReadAggregate = require("../models/events/readEventSchema");
 const WriteAggregate = require("../models/events/writeEventSchema");
 const statusEnum = require("../utils/StatusEnum");
+const {sendArticleForReviewEmail} = require("./emailservice");
 
 const mongoose = require('mongoose');
 
@@ -55,6 +56,7 @@ module.exports.createArticle = expressAsyncHandler(
 
       await user.save();
 
+      sendArticleForReviewEmail(user.email, title);
       // Respond with a success message and the new article
       res.status(201).json({ message: "Article under reviewed", newArticle });
 

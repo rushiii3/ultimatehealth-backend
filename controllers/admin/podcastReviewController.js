@@ -5,7 +5,7 @@ const AudioWAggregate = require("../../models/events/audioWriteEventSchema");
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
-const { sendPodcastPublishedEmail, sendPodcastDiscardEmail } = require('../emailservice');
+const { sendPodcastPublishedEmail, sendPodcastDiscardEmail, pickPodcastMail } = require('../emailservice');
 const { sendPostNotification, podcastReviewNotificationsToUser } = require('../notifications/notificationHelper');
 const { deleteFileFn } = require('../uploadController');
 
@@ -119,7 +119,7 @@ const pickPodcast = expressAsyncHandler(
             if (!podcast_id) {
                 return res.status(400).json({ message: "Podcast id is required" })
             }
-            const podcast = await Podcast.findById(podcast_id);
+            const podcast = await Podcast.findById(podcast_id).populate('user_id', 'email').exec();
             const adminUser = await admin.findById(req.userId);
 
             if (!podcast || !adminUser) {
@@ -133,7 +133,7 @@ const pickPodcast = expressAsyncHandler(
             podcast.updated_at = new Date();
 
             await podcast.save();
-
+            pickPodcastMail(podcast.user_id.email, podcast.title);
             return res.status(200).json({ message: "Podcast picked successfully" });
 
         } catch (err) {
@@ -190,9 +190,9 @@ const approvePodcast = expressAsyncHandler(
                 podcast.title
             );
 
-
+            const dynamicLink = `https://uhsocial.in/api/share/podcast?trackId=${podcast._id}&audioUrl=${podcast.audio_url}`;
             // send mail
-            sendPodcastPublishedEmail(podcast.user_id.email, "", podcast.title);
+            sendPodcastPublishedEmail(podcast.user_id.email, dynamicLink, podcast.title);
             return res.status(200).json({ message: "Podcast published successfully" });
 
         } catch (err) {

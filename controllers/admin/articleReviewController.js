@@ -2,10 +2,10 @@ const expressAsyncHandler = require('express-async-handler');
 const Article = require('../../models/Articles');
 const admin = require('../../models/admin/adminModel');
 const User = require('../../models/UserModel');
-const { articleReviewNotificationsToUser, sendPostNotification, articleSubmitNotificationsToAdmin } = require('../notifications/notificationHelper');
+const { articleReviewNotificationsToUser, articleSubmitNotificationsToAdmin } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
-const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin } = require('../emailservice');
+const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin, pickArticleMail } = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const { deleteFileFn } = require('../uploadController');
@@ -204,13 +204,13 @@ module.exports.assignModerator = expressAsyncHandler(
 
             await article.save();
 
-            articleReviewNotificationsToUser(article.authorId, article._id, article.pb_recordId, null,
+            pickArticleMail(article.authorId.email, article.title);
+
+            articleReviewNotificationsToUser(article.authorId._id, article._id, article.pb_recordId, null,
                 `Congrats!Your Article : ${article.title} is Under Review`,
                 "Our team has started reviewing your article. Stay tuned!"
             );
-
-
-
+           
             res.status(200).json({ message: "Article status updated" });
 
         } catch (err) {
@@ -415,9 +415,10 @@ module.exports.publishArticle = expressAsyncHandler(
             });
 
             await aggregate.save();
-
+            
+            const dynamicLink = `https://uhsocial.in/api/share/article?articleId=${article._id}&recordId=${article.pb_recordId}&authorId=${article.authorId._id}`;
             // send mail to user
-            sendArticlePublishedEmail(article.authorId.email, "", article.title);
+            sendArticlePublishedEmail(article.authorId.email, dynamicLink, article.title);
 
             articleReviewNotificationsToUser(
                 article.authorId._id,
