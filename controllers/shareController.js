@@ -16,7 +16,7 @@ module.exports.shareArticle = expressAsyncHandler(async (req, res) => {
 
         const article = await Article.findById(articleId);
 
-        if(!article || article.status !== statusEnum.statusEnum.PUBLISHED) {
+        if(!article || article.status !== statusEnum.PUBLISHED) {
             return res.status(404).json({ message: "Article not found" });
         }
         const dynamicLink = `https://ultimatehealth.page.link/article?articleId=${article._id}&authorId=${authorId}&recordId=${recordId}`;
@@ -41,7 +41,7 @@ module.exports.sharePodcast = expressAsyncHandler(async (req, res) => {
 
         const podcast = await Podcast.findById(trackId);
 
-        if(!podcast || podcast.status !== statusEnum.statusEnum.PUBLISHED) {
+        if(!podcast || podcast.status !== statusEnum.PUBLISHED) {
             return res.status(404).json({ message: "Podcast not found" });
         }
         const dynamicLink = `https://ultimatehealth.page.link/podcast?trackId=${podcast._id}&audioUrl=${audioUrl}`;
