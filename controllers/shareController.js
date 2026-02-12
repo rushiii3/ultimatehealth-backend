@@ -69,7 +69,6 @@ function generateProfessionalHTML(article, dynamicLink) {
     <!-- Open Graph -->
     <meta property="og:title" content="${article.title}" />
     <meta property="og:description" content="${article.description}" />
-    <meta property="og:image" content="${article.thumbnail}" />
     <meta property="og:type" content="article" />
 
     <style>
