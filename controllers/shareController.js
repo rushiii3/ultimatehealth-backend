@@ -141,9 +141,7 @@ function generateProfessionalHTML(article, dynamicLink) {
 
     <div class="container">
 
-      <div class="hero">
-        <img src="${article.thumbnail}" alt="Article Image" />
-      </div>
+      
 
       <div class="content">
         <h1>${article.title}</h1>
