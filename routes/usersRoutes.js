@@ -1,8 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const path = require("path");
-
-
 const {
   register,
   login,
@@ -46,7 +44,7 @@ router.get("/hello", (req, res) => {
 });
 
 router.get("/tokenstatus", getTokenStatus);
-// Register New User
+
 
 /**
  * @swagger
