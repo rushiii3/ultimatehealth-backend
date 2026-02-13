@@ -301,7 +301,7 @@ function generateBlogContent(htmlContent, article, profileImageUrl) {
           and complete contributor profiles inside the app.
         </p>
 
-        <a href="https://play.google.com/store/apps/details?id=com.anonymous.ultimatehealth"
+        <a href="https://play.google.com/store/apps/details?id=com.anonymous.UltimateHealth"
            target="_blank"
            class="btn btn-primary">
            Download on Play Store
