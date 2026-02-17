@@ -11,7 +11,7 @@ const {sendArticleFeedbackEmail}= require('./controllers/emailservice');
 const EditRequest = require('./models/admin/articleEditRequestModel');
 const Podcast = require('./models/Podcast');
 const statusEnum = require("./utils/StatusEnum");
-const assetLinks = require('./assetslink.json');
+const assetLinks = require('./assetlink.json');
 
 const Article = require('./models/Articles');
 const User = require('./models/UserModel');
