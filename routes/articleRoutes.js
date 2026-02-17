@@ -321,6 +321,7 @@ router.delete('/articles/tags/:id', adminAuthenticateToken, articleController.de
  *               - imageUtils
  *               - pb_recordId
  *               - allow_podcast
+ *               - language
  *             properties:
  *               authorId:
  *                 type: string
@@ -340,10 +341,15 @@ router.delete('/articles/tags/:id', adminAuthenticateToken, articleController.de
  *               tags:
  *                 type: array
  *                 items:
- *                   type: string
+ *                   type: '#/components/schemas/ArticleTag'
  *                 description: A list of tags for the article (e.g., topics, categories).
+ *               language:
+ *                 type: string
+ *                 description: The language of the article. (e.g., "en-IN" for English, "hi-IN" for Hindi, "ta-IN" for tamil, "bn-IN" for bengali etc.)
  *               imageUtils:
- *                 type: object
+ *                 type: array
+ *                 items:
+ *                   type: string
  *                 description: Metadata related to images used in the article.
  *               pb_recordId:
  *                 type: string

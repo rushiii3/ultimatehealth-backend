@@ -6,7 +6,7 @@ const EditRequest = require('../models/admin/articleEditRequestModel');
 const ReadAggregate = require("../models/events/readEventSchema");
 const WriteAggregate = require("../models/events/writeEventSchema");
 const statusEnum = require("../utils/StatusEnum");
-const {sendArticleForReviewEmail} = require("./emailservice");
+const { sendArticleForReviewEmail } = require("./emailservice");
 
 const mongoose = require('mongoose');
 
@@ -14,12 +14,36 @@ module.exports.createArticle = expressAsyncHandler(
   async (req, res) => {
     try {
 
-      const { authorId, title, authorName, description, content, tags, imageUtils, pb_recordId, allow_podcast } = req.body; // Destructure required fields from req.body
+      const { authorId, title, authorName, description, content, tags, imageUtils, pb_recordId, allow_podcast, language } = req.body; // Destructure required fields from req.body
 
 
       if (!authorId || !title || !authorName || !description || !content
-        || !tags || !imageUtils || !pb_recordId || !allow_podcast) {
-        return res.status(400).json({ message: "Please fill in all fields: authorId, title, authorName, description, content, tags, imageUtils, pb_recordId, allow_podcast" });
+        || !tags || !imageUtils || !pb_recordId || !language) {
+        return res.status(400).json({ message: "Please fill in all fields: authorId, title, authorName, description, content, tags, imageUtils, pb_recordId, allow_podcast, language" });
+      }
+
+      if (!Array.isArray(tags) || tags.length === 0) {
+        return res.status(400).json({ error: "Tags must be a non-empty array" });
+      }
+
+      for (const tag of tags) {
+        if (
+          !tag ||
+          typeof tag !== "object" ||
+          !tag._id ||
+          !mongoose.Types.ObjectId.isValid(tag._id)
+        ) {
+          return res.status(400).json({ error: "Invalid tag format" });
+        }
+      }
+
+
+      // Later will be there language schema check
+      const validTags = tags.map(tag => mongoose.Types.ObjectId(tag._id));
+      // validate tags
+      const validTagsFromDB = await ArticleTag.find({ _id: { $in: validTags } });
+      if (validTags.length !== validTagsFromDB.length) {
+        return res.status(400).json({ error: "Invalid tags provided" });
       }
       // Find the user by ID
       const user = await User.findById(authorId);
@@ -40,6 +64,7 @@ module.exports.createArticle = expressAsyncHandler(
         tags,
         description,
         imageUtils,
+        language,
         authorId: user._id, // Set authorId to the user's ObjectId
         pb_recordId,
         allow_for_podcast: allow_podcast
