@@ -76,9 +76,10 @@ module.exports.generateBlogPage = expressAsyncHandler(async (req, res) => {
     article.viewCount += 1;
     await article.save();
     const profileImageUrl = article.authorId.Profile_image && article.authorId.Profile_image.startsWith("https") ? article.authorId.Profile_image : `https://uhsocial.in/api/getfile/${article.authorId.Profile_image}`;
+    const bannerImageUrl = article.imageUtils.length > 0 && article.imageUtils[0].startsWith("https") ? article.imageUtils[0] : `https://uhsocial.in/api/getfile/${article.imageUtils[0]}`;
     const htmlRes = await getHTMLFileContent("content", slug);
 
-    const htmlContent = generateBlogContent(htmlRes.htmlContent, article, profileImageUrl);
+    const htmlContent = generateBlogContent(htmlRes.htmlContent, article, profileImageUrl, bannerImageUrl);
 
     res.setHeader("Content-Type", "text/html");
     res.send(htmlContent);
@@ -89,273 +90,252 @@ module.exports.generateBlogPage = expressAsyncHandler(async (req, res) => {
 });
 
 
-function generateBlogContent(htmlContent, article, profileImageUrl) {
+function generateBlogContent(htmlContent, article, profileImageUrl, bannerImageUrl) {
   return `
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${article.title} | UltimateHealth</title>
+<meta name="description" content="${article.title}" />
 
-  <title>${article.title} | UltimateHealth</title>
-  <meta name="description" content="${article.title}" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <style>
+<style>
 
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: linear-gradient(to bottom, #f7fbff, #ffffff);
-      color: #2c2c2c;
-    }
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #f8fafc;
+  color: #1e293b;
+}
 
-    .container {
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 40px;
-      background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-    }
+/* HERO SECTION */
+.hero {
+  position: relative;
+  height: 480px;
+  width: 100%;
+  overflow: hidden;
+}
 
-    h1 {
-      font-size: 32px;
-      margin-bottom: 10px;
-      color: #0a3d62;
-    }
+.hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(60%);
+}
 
-    .publish-date {
-      color: #777;
-      font-size: 14px;
-      margin-bottom: 30px;
-    }
+.hero-content {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 900px;
+  width: 90%;
+  color: white;
+}
 
-    /* Article Preview */
-    .article-preview-wrapper {
-      position: relative;
-      max-height: 600px;
-      overflow: hidden;
-    }
+.category-badge {
+  display: inline-block;
+  background: #00a8e8;
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
 
-    .article-content {
-      line-height: 1.8;
-      font-size: 17px;
-      color: #444;
-    }
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 46px;
+  line-height: 1.2;
+  margin: 0 0 20px 0;
+}
 
-    .fade-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 220px;
-      background: linear-gradient(to bottom, rgba(255,255,255,0), #ffffff);
-    }
+.meta {
+  font-size: 15px;
+  opacity: 0.9;
+}
 
-    /* Footer */
-    .preview-footer {
-      margin-top: 60px;
-      padding: 50px 30px;
-      background: #f4f9fc;
-      border-radius: 14px;
-      text-align: center;
-    }
+/* ARTICLE BODY */
+.article-container {
+  max-width: 800px;
+  margin: -80px auto 80px auto;
+  background: #ffffff;
+  padding: 60px;
+  border-radius: 18px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 10;
+}
 
-    /* Contributor */
-    .contributor-box {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 20px;
-      margin-bottom: 40px;
-      flex-wrap: wrap;
-    }
+.view-counter {
+  position: absolute;
+  top: -20px;
+  right: 40px;
+  background: #ffffff;
+  padding: 10px 18px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
 
-    .contributor-img {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid #00698f;
-    }
+.article-content {
+  font-size: 18px;
+  line-height: 1.9;
+  color: #374151;
+}
 
-    .contributor-info {
-      max-width: 400px;
-      text-align: left;
-    }
+.article-content h2 {
+  font-family: 'Playfair Display', serif;
+  margin-top: 50px;
+  font-size: 28px;
+  color: #0f172a;
+}
 
-    .contributor-info h4 {
-      margin: 0 0 6px 0;
-      font-size: 18px;
-      color: #0a3d62;
-    }
+.article-content p {
+  margin-bottom: 24px;
+}
 
-    .contributor-info p {
-      margin: 0;
-      font-size: 14px;
-      color: #666;
-    }
+/* CONTRIBUTOR */
+.author-section {
+  margin-top: 80px;
+  padding-top: 50px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 
-    /* CTA Section */
-    .cta-section h3 {
-      font-size: 22px;
-      margin-bottom: 12px;
-      color: #0a3d62;
-    }
+.author-img {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+}
 
-    .cta-section p {
-      margin-bottom: 25px;
-      color: #555;
-      font-size: 15px;
-    }
+.author-info h4 {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+}
 
-    .btn {
-      display: inline-block;
-      padding: 14px 28px;
-      margin: 10px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      transition: all 0.3s ease;
-    }
+.author-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
 
-    .btn-primary {
-      background: #00698f;
-      color: #fff;
-      box-shadow: 0 6px 16px rgba(0,105,143,0.25);
-    }
+/* CTA */
+.cta-box {
+  margin-top: 80px;
+  padding: 50px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #00698f, #00a8e8);
+  color: white;
+  text-align: center;
+}
 
-    .btn-primary:hover {
-      background: #005374;
-      transform: translateY(-2px);
-    }
+.cta-box h3 {
+  font-size: 26px;
+  margin-bottom: 15px;
+}
 
-    .btn-dark {
-      background: #000;
-      color: #fff;
-    }
+.cta-box p {
+  font-size: 16px;
+  margin-bottom: 25px;
+  opacity: 0.95;
+}
 
-    .btn-dark:hover {
-      background: #222;
-      transform: translateY(-2px);
-    }
+.btn {
+  display: inline-block;
+  padding: 14px 28px;
+  background: white;
+  color: #00698f;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: 0.3s ease;
+}
 
-    /* Bigger Copyright Section */
-    .copyright-section {
-      margin-top: 60px;
-      padding: 30px;
-      background: #0a3d62;
-      color: #ffffff;
-      border-radius: 12px;
-    }
+.btn:hover {
+  transform: translateY(-3px);
+}
 
-    .copyright-section h4 {
-      margin: 0 0 10px 0;
-      font-size: 18px;
-    }
+/* FOOTER COPYRIGHT */
+.footer {
+  margin-top: 60px;
+  text-align: center;
+  font-size: 14px;
+  color: #94a3b8;
+}
 
-    .copyright-section p {
-      margin: 0;
-      font-size: 14px;
-      opacity: 0.85;
-    }
+@media(max-width: 768px) {
+  .hero h1 {
+    font-size: 32px;
+  }
+  .article-container {
+    padding: 30px;
+  }
+}
 
-  .view-counter {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: #f1f3f5;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 20px;
-   }
-
-   .view-dot {
-    width: 8px;
-    height: 8px;
-    background: #28a745;
-    border-radius: 50%;
-    }
-
-
-  </style>
+</style>
 </head>
 
 <body>
 
-  <div class="container">
-
+<!-- HERO -->
+<section class="hero">
+  <img src="${bannerImageUrl}" alt="Banner">
+  <div class="hero-content">
+    <div class="category-badge">Health & Wellness</div>
     <h1>${article.title}</h1>
-    <p class="publish-date">
+    <div class="meta">
       Published on ${moment(article.lastUpdated).format("MMMM D, YYYY")}
-    </p>
-    <div class="view-counter">
-  <div class="view-dot"></div>
-  <span id="viewCount">${formatViewCount(article.viewCount)}</span> views
-</div>
-
-    <div class="article-preview-wrapper">
-
-      <div class="article-content">
-        ${htmlContent}
-      </div>
-
-      <div class="fade-overlay"></div>
-
     </div>
-
-    <footer class="preview-footer">
-
-      <div class="contributor-box">
-        <img src="${profileImageUrl}" 
-             alt="${article.authorId.user_name}" 
-             class="contributor-img" />
-
-        <div class="contributor-info">
-          <h4>${article.authorId.user_name}</h4>
-          <p>Health Enthusiast | UltimateHealth Contributor</p>
-        </div>
-      </div>
-
-      <div class="cta-section">
-        <h3>Continue Reading Inside UltimateHealth App</h3>
-        <p>
-          Unlock full articles, multilingual health insights,
-          and complete contributor profiles inside the app.
-        </p>
-
-        <a href="https://play.google.com/store/apps/details?id=com.anonymous.UltimateHealth"
-           target="_blank"
-           class="btn btn-primary">
-           Download on Play Store
-        </a>
-
-        <a href="#"
-           target="_blank"
-           class="btn btn-dark">
-           Download on App Store
-        </a>
-      </div>
-
-      <div class="copyright-section">
-        <h4>UltimateHealth © 2026</h4>
-        <p>
-          All rights reserved. This preview content is protected under
-          applicable copyright laws. Unauthorized reproduction or distribution
-          is strictly prohibited.
-        </p>
-      </div>
-
-    </footer>
-
   </div>
+</section>
+
+<!-- ARTICLE BODY -->
+<div class="article-container">
+
+  <div class="view-counter">
+    👁 ${formatViewCount(article.viewCount)} views
+  </div>
+
+  <div class="article-content">
+    ${htmlContent}
+  </div>
+
+  <!-- AUTHOR -->
+  <div class="author-section">
+    <img src="${profileImageUrl}" alt="${article.authorId.user_name}" class="author-img">
+    <div class="author-info">
+      <h4>${article.authorId.user_name}</h4>
+      <p>Health Contributor at UltimateHealth</p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-box">
+    <h3>Read Full Article in UltimateHealth App</h3>
+    <p>Access multilingual insights, full content & verified contributors inside the app.</p>
+    <a href="https://play.google.com/store/apps/details?id=com.anonymous.UltimateHealth" class="btn">
+      Download Now
+    </a>
+  </div>
+
+  <div class="footer">
+    UltimateHealth © 2026 · All Rights Reserved
+  </div>
+
+</div>
 
 </body>
 </html>
-  `;
+`;
 }
 
 
