@@ -671,7 +671,7 @@ router.get('/podcast/like-graph', authenticateToken, getPodcastLikeDataForGraphs
 
 /**
  * @swagger
- * /podcasts/create:
+ * /podcast/create:
  *   post:
  *     tags:
  *       - Podcasts
