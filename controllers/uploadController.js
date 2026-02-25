@@ -97,17 +97,20 @@ const uploadFile = async (req, res) => {
         if (file.mimetype.startsWith('image/')) {
 
             // Optimize storage, create buffer and convert image in one format 
-            await sharp(file.path)
+           sharp(file.path)
                 .webp({ quality: 80 })
                 .toBuffer(async (err, buffer) => {
                     if (err) {
                         return res.status(500).send('Error processing image: ' + err.message);
                     }
 
+                   
+
                     const fileNameWithoutExt = path.basename(file.originalname, path.extname(file.originalname));
+                    const uniqueKey = `${fileNameWithoutExt}-${Date.now()}.webp`;
                     const params = {
                         Bucket: 'ultimate-health-new',
-                        Key: `${fileNameWithoutExt}.webp`, // replace operation needed
+                        Key: uniqueKey, 
                         Body: buffer,
                         ContentType: 'image/webp',
                     };
@@ -136,7 +139,7 @@ const uploadFile = async (req, res) => {
                         if (err) console.error('Unlink error', err);
                     });
 
-                    res.status(200).send({ message: 'Image uploaded successfully', key: `${fileNameWithoutExt}.webp` });
+                    res.status(200).send({ message: 'Image uploaded successfully', key: uniqueKey });
                 });
         } else if (file.mimetype === 'text/html') {
             // Handle html file upload
