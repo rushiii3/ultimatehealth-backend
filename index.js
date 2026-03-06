@@ -22,6 +22,7 @@ const db = require("./config/database");
 const userRoutes = require("./routes/usersRoutes");
 const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
+const languageRoutes = require("./routes/languageRoute");
 const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
 const notificationRoute = require('./routes/notificationRoute');
@@ -80,6 +81,7 @@ app.use("/api", articleEditRoute);
 app.use("/api", podcastRoute);
 app.use("/api", podcastAdminRoute);
 app.use("/api/review", commentRoute);
+app.use("/api/language", languageRoutes);
 app.use("/api/gemini", aiRoute);
 app.use("/api", shareRoute );
 

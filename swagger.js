@@ -6,10 +6,10 @@ const url = process.env.PROD_URL;
 
 const options = {
   definition: {
-    openapi: '3.0.3',
+    openapi: '3.0.0',
     info: {
       title: 'API Documentation- UltimateHealth',
-      version: '1.2.6',
+      version: '3.1.3',
     },
 
     servers: [{ url: `${url}/api` }],
@@ -208,6 +208,15 @@ const options = {
             allow_for_podcast: { type: "boolean" }
           },
           required: ["title", "authorName", "authorId", "content", "publishedDate", "lastUpdated", "imageUtils", "viewCount", "likeCount", "language"]
+        },
+
+        Language: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            code: { type: "string" },
+          },
+          required: ["name", "code",]
         },
 
         /***************************  Improvement Request ***************************************************/
