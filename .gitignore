@@ -10,5 +10,7 @@ package-lock.json
 ultimatehealth-firebase-adminsdk.json
 assetlink.json
 
+/public/delete-account-admin.html
+/public/delete-account-user.html
 test.js
 #public/assets/
