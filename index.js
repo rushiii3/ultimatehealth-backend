@@ -47,6 +47,7 @@ const {
 } = require('./controllers/notifications/notificationHelper');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 dotenv.config();
@@ -1108,4 +1109,7 @@ io.on('connection', (socket) => {
 
 });
 
+// Uncomment when v2 is going to live
+// Error handling middleware
+// app.use(errorHandler);
 module.exports = app;
