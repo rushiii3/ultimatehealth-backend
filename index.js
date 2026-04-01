@@ -11,7 +11,7 @@ const {sendArticleFeedbackEmail}= require('./controllers/emailservice');
 const EditRequest = require('./models/admin/articleEditRequestModel');
 const Podcast = require('./models/Podcast');
 const statusEnum = require("./utils/StatusEnum");
-// const assetLinks = require('./assetlink.json');
+const assetLinks = require('./assetlink.json');
 
 const Article = require('./models/Articles');
 const User = require('./models/UserModel');
@@ -63,7 +63,7 @@ app.use(express.json()); // Parse incoming JSON requests
 //app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true }))
 app.use(cors({
-    origin: ["http://uhsocial.in", "https://uhsocial.in", "http://localhost:8080", "http://localhost:3001"],
+    origin: ["http://uhsocial.in", "https://uhsocial.in"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true
 }));
@@ -1109,5 +1109,7 @@ io.on('connection', (socket) => {
 
 });
 
-app.use(errorHandler);
+// Uncomment when v2 is going to live
+// Error handling middleware
+// app.use(errorHandler);
 module.exports = app;
