@@ -250,7 +250,7 @@ const searchPodcast = expressAsyncHandler(
 
             const regex = new RegExp(q, 'i');
             // Find all article title matches with the rejex
-            const matchingArticles = await Article.find({ title: regex }).select('_id title');
+            const matchingArticles = await Article.find({ title: regex }).select('_id title').lean().exec();
             const articleIds = matchingArticles.map(a => a._id);
 
             const matchPodcasts = await Podcast.
@@ -264,7 +264,7 @@ const searchPodcast = expressAsyncHandler(
                         ]
                     }
                 )
-                .select('_id title description article_id tags viewUsers duration')
+                .select('_id title cover_image description article_id tags viewUsers duration')
                 .populate('tags')
                 .populate('article_id', 'title')
                 .populate('user_id', 'user_name user_handle Profile_image')

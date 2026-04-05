@@ -93,7 +93,7 @@ const startConversation = expressAsyncHandler(
 
 async function generateReply(history) {
     const formattedMessages = history.map(m => ({
-        role: m.role,
+        role: m.role === "user" ? "user" : "model",
         parts: [{ text: m.text }]
     }));
 

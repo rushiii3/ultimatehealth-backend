@@ -36,7 +36,7 @@ const { startConversation,loadConversations, startPPLXConversation } = require('
  *                 message:
  *                   $ref: '#/components/schemas/Message'
  */
-router.post("/send", authToken, startPPLXConversation);
+router.post("/send", authToken, startConversation);
 
 /**
  * @swagger
