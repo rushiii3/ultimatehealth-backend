@@ -71,6 +71,10 @@ const adminSchema = new Schema({
     },
     refreshToken: { type: String, default: null } ,
     fcmToken: { type: String, default: null }, 
+    signature_url: {
+        type: String,
+        default: "",
+    }
 
 });
 module.exports = mongoose.model("admin",adminSchema);

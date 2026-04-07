@@ -480,6 +480,33 @@ router.get("/admin/delete-account", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "login-admin.html"));
 });
 
+/**
+ * @openapi
+ * /admin/agreement:
+ *   get:
+ *     summary: Display admin and moderator agreement page
+ *     description: |
+ *       Serves the HTML page containing the terms and conditions that admins and moderators
+ *       must accept before accessing admin features. The page includes:
+ *       - Role definitions (Super Admin, Moderator)
+ *       - Responsibilities and privileges
+ *       - Code of conduct
+ *       - Content review standards
+ *       - Security guidelines
+ *       - Data privacy compliance
+ *     tags: [Admin]
+ *     responses:
+ *       200:
+ *         description: Admin agreement page displayed successfully
+ *         content:
+ *           text/html:
+ *             schema:
+ *               type: string
+ */
+router.get("/admin/agreement", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "admin-agreement.html"));
+});
+
 
 module.exports = router;
 
