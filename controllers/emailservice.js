@@ -9,6 +9,7 @@ const admin = require("../models/admin/adminModel");
 const cache = require('memory-cache');
 const statusEnum = require("../utils/StatusEnum");
 const cooldownTime = 3600;
+const path = require("path");
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -17,6 +18,20 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+
+const getAdminAgreementHTML = async () => {
+  try {
+    const filePath = path.join(__dirname, "..", "public", "admin-agreement.html");
+
+    const html = await fs.promises.readFile(filePath, "utf-8");
+
+    return html;
+
+  } catch (error) {
+    console.error("Error reading HTML file:", error);
+    throw new Error("Failed to load agreement HTML");
+  }
+};
 
 const sendVerificationEmail = (email, token, isAdmin) => {
 
@@ -39,7 +54,7 @@ const sendVerificationEmail = (email, token, isAdmin) => {
 };
 
 const sendContributorVerificationEmail = (email, password) => {
- // const verifyUrl = `${process.env.PROD_URL}/api/user/verifyEmail?token=${token}&isAdmin=${isAdmin}`;
+  // const verifyUrl = `${process.env.PROD_URL}/api/user/verifyEmail?token=${token}&isAdmin=${isAdmin}`;
   const deleteAccountUrl = `https://uhsocial.in/api/delete-account`;
 
   const mailOptions = {
@@ -192,8 +207,9 @@ const verifyEmail = async (req, res) => {
         return res.status(201).json({ message: 'Admin user not found, register yourself first' });
       }
 
-      user.isVerified = true;
-      await user.save();
+       return res.redirect(`../public/admin-agreement.html?token=${token}`);
+      //  user.isVerified = true;
+      //  await user.save();
     }
     else {
 

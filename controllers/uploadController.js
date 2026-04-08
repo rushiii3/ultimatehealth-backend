@@ -10,6 +10,10 @@ const { FormData } = require('formdata-node')
 const { fileFromPath } = require('formdata-node/file-from-path')
 const expressAsyncHandler = require('express-async-handler');
 const { getHTMLFileContent, authenticateAdmin, getPocketbaseClient } = require('../utils/pocketbaseUtil');
+const { v4: uuidv4 } = require("uuid");
+const puppeteer = require("puppeteer");
+const adminModel = require("../models/admin/adminModel");
+
 
 require('dotenv').config();
 
@@ -80,7 +84,27 @@ const allowedAudioTypes = [
 
 // Max file size in bytes (~150 MB)
 const MAX_FILE_SIZE = 150 * 1024 * 1024;
+let browser;
 
+const getBrowser = async () => {
+    if (!browser) {
+        browser = await puppeteer.launch({
+            args: ["--no-sandbox"],
+        });
+    }
+    return browser;
+};
+
+const getUserFromToken = (req) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        throw new Error("Unauthorized: No token provided");
+    }
+
+    const token = authHeader.split(" ")[1];
+    return jwt.verify(token, process.env.JWT_SECRET);
+};
 
 // upload file
 const uploadFile = async (req, res) => {
@@ -97,20 +121,20 @@ const uploadFile = async (req, res) => {
         if (file.mimetype.startsWith('image/')) {
 
             // Optimize storage, create buffer and convert image in one format 
-           sharp(file.path)
+            sharp(file.path)
                 .webp({ quality: 80 })
                 .toBuffer(async (err, buffer) => {
                     if (err) {
                         return res.status(500).send('Error processing image: ' + err.message);
                     }
 
-                   
+
 
                     const fileNameWithoutExt = path.basename(file.originalname, path.extname(file.originalname));
                     const uniqueKey = `${fileNameWithoutExt}-${Date.now()}.webp`;
                     const params = {
                         Bucket: 'ultimate-health-new',
-                        Key: uniqueKey, 
+                        Key: uniqueKey,
                         Body: buffer,
                         ContentType: 'image/webp',
                     };
@@ -229,6 +253,101 @@ const uploadFile = async (req, res) => {
     }
 }
 
+const uploadAgreementPDF = expressAsyncHandler(
+    async (req, res) => {
+        try {
+            const { html, fullName } = req.body;
+
+            if (!html || !fullName) {
+                return res.status(400).json({ message: "HTML and full name are required" });
+            }
+
+            const decoded = getUserFromToken(req);
+
+            const admin = await adminModel.findOne({ email: decoded.email });
+            // const admin = await adminModel.findById(userId);
+
+            if (!admin) {
+                return res.status(404).json({ message: "Admin not found" });
+            }
+
+
+            const normalize = (str) =>
+                str.toLowerCase().replace(/\s+/g, " ").trim();
+
+            const inputName = normalize(fullName);
+            const dbName = normalize(admin.user_name);
+
+
+            if (!inputName.includes(dbName) || !dbName.includes(inputName)) {
+                return res.status(403).json({
+                    message: "Full name does not match your account name",
+                });
+            }
+            if (!html.includes("data:image")) {
+                return res.status(400).json({ message: "Signature missing" });
+            }
+
+            // 🚀 Generate PDF
+            const browser = await puppeteer.launch({
+                args: ["--no-sandbox"],
+            });
+
+            const browserInstance = await getBrowser();
+            const page = await browserInstance.newPage();
+
+            await page.setContent(html, {
+                waitUntil: "networkidle0",
+            });
+
+            let pdfBuffer;
+
+            try {
+                await page.setContent(cleanHtml, {
+                    waitUntil: "networkidle0",
+                });
+
+                pdfBuffer = await page.pdf({
+                    format: "A4",
+                    printBackground: true,
+                });
+
+            } finally {
+                await page.close();
+            }
+
+            // 🧾 Unique key
+            const uniqueKey = `agreements-${userId}-${Date.now()}-${uuidv4()}.pdf`;
+
+            const params = {
+                Bucket: "ultimate-health-new",
+                Key: uniqueKey,
+                Body: pdfBuffer,
+                ContentType: "application/pdf",
+            };
+
+            const command = new PutObjectCommand(params);
+            await s3Client.send(command);
+
+            admin.isVerified = true;
+            admin.signature_url = uniqueKey;
+
+            await admin.save();
+            // ✅ Same response style
+            res.status(200).send({
+                message: "Agreement uploaded successfully",
+                key: uniqueKey,
+            });
+
+        } catch (err) {
+            console.log("Upload Agreement Error", err);
+            res.status(500).json({
+                message: "Failed to upload agreement",
+            });
+        }
+    }
+);
+
 // get file
 const getFile = async (req, res) => {
     const params = {
@@ -339,61 +458,61 @@ const uploadFileToPocketBase = expressAsyncHandler(
 )
 
 const uploadHTMLToPocketBase = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const pb = await getPocketbaseClient();
-      await authenticateAdmin(pb);
+    async (req, res) => {
+        try {
+            const pb = await getPocketbaseClient();
+            await authenticateAdmin(pb);
 
-      const { record_id, title } = req.body;
-      const uploadedFile = req.file; 
+            const { record_id, title } = req.body;
+            const uploadedFile = req.file;
 
-      if (!title && !uploadedFile) {
-        return res.status(400).send({ message: 'Please provide title and file' });
-      }
+            if (!title && !uploadedFile) {
+                return res.status(400).send({ message: 'Please provide title and file' });
+            }
 
-     
-      const htmlContent = fs.readFileSync(uploadedFile.path, 'utf8');
 
-      
-      const fileName = `${title?.replace(/\s+/g, '_') || 'file'}.html`;
-      const filePath = path.join(os.tmpdir(), fileName);
-      fs.writeFileSync(filePath, htmlContent, 'utf8');
+            const htmlContent = fs.readFileSync(uploadedFile.path, 'utf8');
 
-      
-      const formData = new FormData();
-      formData.append('title', title || 'Untitled');
-      const file = await fileFromPath(filePath);
-      formData.append('html_file', file);
 
-     
-      let record;
-      if (record_id) {
-        record = await pb.collection('content').update(record_id, formData);
+            const fileName = `${title?.replace(/\s+/g, '_') || 'file'}.html`;
+            const filePath = path.join(os.tmpdir(), fileName);
+            fs.writeFileSync(filePath, htmlContent, 'utf8');
 
-        if (!record) {
-          return res.status(404).json({ message: 'Record not found' });
+
+            const formData = new FormData();
+            formData.append('title', title || 'Untitled');
+            const file = await fileFromPath(filePath);
+            formData.append('html_file', file);
+
+
+            let record;
+            if (record_id) {
+                record = await pb.collection('content').update(record_id, formData);
+
+                if (!record) {
+                    return res.status(404).json({ message: 'Record not found' });
+                }
+            } else {
+                record = await pb.collection('content').create(formData);
+            }
+
+            // cleanup
+            fs.unlinkSync(filePath);
+            if (uploadedFile.path) {
+                fs.unlinkSync(uploadedFile.path);
+            }
+            return res.status(200).json({
+                message: 'File uploaded successfully',
+                recordId: record.id,
+                html_file: record.html_file,
+            });
+        } catch (err) {
+            console.log("Error uploading file to pocketbase:", err);
+            return res.status(500).json({
+                message: 'Internal server error'
+            });
         }
-      } else {
-        record = await pb.collection('content').create(formData);
-      }
-
-      // cleanup
-      fs.unlinkSync(filePath);
-      if(uploadedFile.path){
-        fs.unlinkSync(uploadedFile.path);
-      }
-      return res.status(200).json({
-        message: 'File uploaded successfully',
-        recordId: record.id,
-        html_file: record.html_file,
-      });
-    } catch (err) {
-      console.log("Error uploading file to pocketbase:", err);
-      return res.status(500).json({
-        message: 'Internal server error'
-      });
     }
-  }
 );
 
 // User & Admin
@@ -626,6 +745,7 @@ const deleteImprovementRecordFromPocketbase = expressAsyncHandler(
 
 module.exports = {
     uploadFile,
+    uploadAgreementPDF,
     getFile,
     deleteFile,
     uploadFileToPocketBase,

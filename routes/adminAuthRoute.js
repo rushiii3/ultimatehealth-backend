@@ -9,6 +9,7 @@ const {
 const path = require("path");
 const authenticateToken = require("../middleware/adminAuthenticateToken");
 
+const uploadAgreementPDF = require("../controllers/uploadController");
 
 
 
@@ -116,6 +117,7 @@ router.post("/admin/register", register);
 
 
 router.post("/admin/login", login);
+router.post("/admin/upload-agreement",  uploadAgreementPDF);
 
 /**
  * @openapi
