@@ -9,7 +9,7 @@ const {
 const path = require("path");
 const authenticateToken = require("../middleware/adminAuthenticateToken");
 
-const uploadAgreementPDF = require("../controllers/uploadController");
+const { uploadAgreementPDF } = require("../controllers/uploadController");
 
 
 
