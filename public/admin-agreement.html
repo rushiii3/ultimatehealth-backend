@@ -686,7 +686,7 @@
            const isChecked = checkbox.checked;
          
            // Enable button only if all fields are filled and signature is drawn
-           if (isValidFullName(fullName)  && designation && hasSignature && isChecked) {
+           if (isValidFullName(fullName)  && designation && isSignatureValid() && isChecked) {
              acceptBtn.disabled = false;
            } else {
              acceptBtn.disabled = true;

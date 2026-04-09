@@ -13,7 +13,7 @@ const { getHTMLFileContent, authenticateAdmin, getPocketbaseClient } = require('
 const crypto = require('crypto');
 const puppeteer = require("puppeteer");
 const adminModel = require("../models/admin/adminModel");
-
+const jwt = require('jsonwebtoken');
 
 require('dotenv').config();
 
