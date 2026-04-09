@@ -10,7 +10,7 @@ const { FormData } = require('formdata-node')
 const { fileFromPath } = require('formdata-node/file-from-path')
 const expressAsyncHandler = require('express-async-handler');
 const { getHTMLFileContent, authenticateAdmin, getPocketbaseClient } = require('../utils/pocketbaseUtil');
-const { v4: uuidv4 } = require("uuid");
+const crypto = require('crypto');
 const puppeteer = require("puppeteer");
 const adminModel = require("../models/admin/adminModel");
 
@@ -317,7 +317,7 @@ const uploadAgreementPDF = expressAsyncHandler(
             }
 
             // 🧾 Unique key
-            const uniqueKey = `agreements-${userId}-${Date.now()}-${uuidv4()}.pdf`;
+            const uniqueKey = `agreements-${userId}-${Date.now()}-${crypto.randomUUID()}.pdf`;
 
             const params = {
                 Bucket: "ultimate-health-new",
