@@ -292,7 +292,7 @@ router.get('/podcast/playlist-details', authenticateToken, getPodcastsByPlaylist
  *                   type: string
  *                   example: Internal server error
  */
-router.get('/podcast/published-podcasts', authenticateToken, getAllPublishedPodcasts);
+router.get('/podcast/published-podcasts', getAllPublishedPodcasts);
 
 /**
  * @swagger
@@ -362,7 +362,7 @@ router.get('/podcast/published-podcasts', authenticateToken, getAllPublishedPodc
  *                   type: string
  *                   example: Internal server error
  */
-router.get('/podcast/details', authenticateToken, getPodcastById);
+router.get('/podcast/details', getPodcastById);
 
 /**
  * @swagger
@@ -442,7 +442,7 @@ router.get('/podcast/details', authenticateToken, getPodcastById);
  *                   type: string
  *                   example: Internal server error
  */
-router.get('/podcast/search', authenticateToken, searchPodcast);
+router.get('/podcast/search', searchPodcast);
 
 /**
  * @swagger

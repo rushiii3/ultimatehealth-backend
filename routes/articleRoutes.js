@@ -498,7 +498,7 @@ router.post('/articles',authenticateToken, articleController.createArticle);
  *                   example: "Error fetching articles"
  */
 
-router.get('/articles',authenticateToken, articleController.getAllArticles);
+router.get('/articles', articleController.getAllArticles);
 
 /**
  * @openapi
@@ -565,7 +565,7 @@ router.get('/articles',authenticateToken, articleController.getAllArticles);
  *                   example: "Error fetching article"
  */
 
-router.get('/articles/:id',authenticateToken, articleController.getArticleById);
+router.get('/articles/:id', articleController.getArticleById);
 
 /**
  * @deprecated
