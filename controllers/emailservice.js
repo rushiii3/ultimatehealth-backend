@@ -207,7 +207,7 @@ const verifyEmail = async (req, res) => {
         return res.status(201).json({ message: 'Admin user not found, register yourself first' });
       }
 
-       return res.redirect(`../public/admin-agreement.html?token=${token}`);
+       return res.redirect(`/admin-agreement.html?token=${token}`);
       //  user.isVerified = true;
       //  await user.save();
     }

@@ -125,7 +125,7 @@ module.exports.login = expressAsyncHandler(
         return res.status(404).json({ error: "User not found" });
       }
 
-      if (user.isVerified === false) {
+      if (user.isVerified === false || !user.signature_url || user.signature_url === "") {
         return res
           .status(403)
           .json({ error: "Email not verified. Please check your email." });
