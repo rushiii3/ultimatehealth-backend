@@ -289,21 +289,13 @@ const uploadAgreementPDF = expressAsyncHandler(
             }
 
             // 🚀 Generate PDF
-            const browser = await puppeteer.launch({
-                args: ["--no-sandbox"],
-            });
-
             const browserInstance = await getBrowser();
             const page = await browserInstance.newPage();
-
-            await page.setContent(html, {
-                waitUntil: "networkidle0",
-            });
 
             let pdfBuffer;
 
             try {
-                await page.setContent(cleanHtml, {
+                await page.setContent(html, {
                     waitUntil: "networkidle0",
                 });
 
@@ -317,7 +309,7 @@ const uploadAgreementPDF = expressAsyncHandler(
             }
 
             // 🧾 Unique key
-            const uniqueKey = `agreements-${userId}-${Date.now()}-${crypto.randomUUID()}.pdf`;
+            const uniqueKey = `agreements-${admin._id}-${Date.now()}-${crypto.randomUUID()}.pdf`;
 
             const params = {
                 Bucket: "ultimate-health-new",
