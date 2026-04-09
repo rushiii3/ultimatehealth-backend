@@ -275,7 +275,7 @@ module.exports.userFollowNotification = async (userId, message) => {
                 commentId: null,
                 type: 'userFollow',
                 title: message.title,
-                message: message.body,
+                message: message.message,
                 read: false,
                 timestamp: Date.now()
             });
