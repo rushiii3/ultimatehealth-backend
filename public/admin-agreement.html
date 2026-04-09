@@ -785,10 +785,16 @@
          }
          
          messageDiv.className = 'success';
-         messageDiv.textContent = '✓ Agreement signed & uploaded successfully! Redirecting...';
-         
+         messageDiv.textContent = '✓ Agreement signed & uploaded successfully! Redirecting to your PDF...';
+
          setTimeout(() => {
-           window.location.href = "/admin/dashboard";
+           if (data.pdfUrl) {
+             window.location.href = data.pdfUrl;
+           } else if (data.key) {
+             window.location.href = `https://uhsocial.in/api/getFile/${data.key}`;
+           } else {
+             window.location.href = "/admin/dashboard";
+           }
          }, 2000);
          
          } catch (error) {

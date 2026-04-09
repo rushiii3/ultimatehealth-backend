@@ -288,20 +288,80 @@ const uploadAgreementPDF = expressAsyncHandler(
                 return res.status(400).json({ message: "Signature missing" });
             }
 
-            // 🚀 Generate PDF
+            // Verify checkbox is checked in the HTML
+            if (!html.includes('checked') || !html.includes('agreeCheckbox')) {
+                return res.status(400).json({ message: "Agreement must be accepted" });
+            }
+
+           
+          
+            // Add print-specific styles for proper page breaks
+            const cleanedHtml = html
+                .replace(/max-height:\s*500px;/g, 'max-height: none;')
+                .replace(/overflow-y:\s*auto;/g, 'overflow-y: visible;')
+                .replace(/<\/style>/, `
+                    @media print {
+                        body {
+                            background: white !important;
+                            padding: 0 !important;
+                            min-height: auto !important;
+                        }
+                        .content {
+                            max-height: none !important;
+                            overflow: visible !important;
+                            page-break-inside: auto;
+                        }
+                        h2 {
+                            page-break-after: avoid;
+                            page-break-inside: avoid;
+                        }
+                        .highlight {
+                            page-break-inside: avoid;
+                        }
+                        ul, ol {
+                            page-break-inside: auto;
+                        }
+                        li {
+                            page-break-inside: avoid;
+                        }
+                        .signature-section {
+                            page-break-before: auto;
+                            page-break-inside: avoid;
+                        }
+                        .footer-section {
+                            page-break-inside: avoid;
+                        }
+                        .agreement-container {
+                            box-shadow: none !important;
+                            border-radius: 0 !important;
+                        }
+                        .btn, .btn-clear {
+                            display: none !important;
+                        }
+                    }
+                </style>`);
+
+         
             const browserInstance = await getBrowser();
             const page = await browserInstance.newPage();
 
             let pdfBuffer;
 
             try {
-                await page.setContent(html, {
+                await page.setContent(cleanedHtml, {
                     waitUntil: "networkidle0",
                 });
 
                 pdfBuffer = await page.pdf({
                     format: "A4",
                     printBackground: true,
+                    margin: {
+                        top: '20mm',
+                        right: '15mm',
+                        bottom: '20mm',
+                        left: '15mm'
+                    },
+                    preferCSSPageSize: false,
                 });
 
             } finally {
@@ -325,10 +385,11 @@ const uploadAgreementPDF = expressAsyncHandler(
             admin.signature_url = uniqueKey;
 
             await admin.save();
-            // ✅ Same response style
+
             res.status(200).send({
                 message: "Agreement uploaded successfully",
                 key: uniqueKey,
+                pdfUrl: `https://uhsocial.in/api/getFile/${uniqueKey}`,
             });
 
         } catch (err) {
