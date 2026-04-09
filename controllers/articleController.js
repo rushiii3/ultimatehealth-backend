@@ -662,7 +662,7 @@ module.exports.updateViewCount = expressAsyncHandler(
       }
 
       // Increment view count and add user to viewUsers
-      //articleDb.viewCount += 1;
+      articleDb.viewCount += 1;
       articleDb.viewUsers.push(req.userId);
 
       await articleDb.save();

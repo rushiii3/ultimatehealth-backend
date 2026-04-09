@@ -400,6 +400,7 @@ module.exports.publishArticle = expressAsyncHandler(
             //if (!user) {
             // return res.status(404).json({ message: "Author not found" });
             //}
+
             article.status = statusEnum.statusEnum.PUBLISHED;
             article.publishedDate = new Date();
             article.lastUpdated = new Date();
@@ -442,6 +443,7 @@ module.exports.publishArticle = expressAsyncHandler(
     }
 )
 
+// Future scope: User can reach out to super admin if they think article is wrongly discarded, then super admin can review the article and can publish if found it relevant.
 
 module.exports.discardChanges = expressAsyncHandler(
     async (req, res) => {
@@ -462,7 +464,7 @@ module.exports.discardChanges = expressAsyncHandler(
 
             const user = await User.findById(article.authorId);
 
-            article.reviewer_id = null;
+            article.reviewer_id = req.userId;
             article.assigned_at = null;
             article.status = statusEnum.statusEnum.DISCARDED;
             article.lastUpdated = new Date();
