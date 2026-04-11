@@ -7,8 +7,9 @@ const generateHashPassword = async (password) => {
     return hashedPassword;
 }
 
-const isSamePassword = async (userPassword, newPassword) => {
-    return await bcrypt.compare(userPassword, newPassword);
+const isSamePassword = async (userPassword, hashedPassword) => {
+    const isPasswordValid = await bcrypt.compare(userPassword, hashedPassword);
+    return isPasswordValid;
 }
 
 module.exports = {

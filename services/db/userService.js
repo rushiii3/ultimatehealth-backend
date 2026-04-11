@@ -85,9 +85,8 @@ const findUnverifiedUserByEmail = async (email) => {
 }
 
 const findUnverifiedUserByHandle = async (user_handle) => {
-
-    if (!user) return null;
     const user = await UnverifiedUser.findOne({ user_handle: user_handle });
+    if (!user) return null;
     return user;
 }
 
@@ -107,9 +106,8 @@ const findUserByEmail = async (email) => {
 }
 
 const findUserByHandle = async (user_handle) => {
-
-    if (!user) return null;
     const user = await User.findOne({ user_handle: user_handle });
+    if (!user) return null;
     return user;
 }
 
