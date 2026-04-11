@@ -352,6 +352,30 @@ const uploadAgreementPDF = expressAsyncHandler(
                     waitUntil: "networkidle0",
                 });
 
+                // Wait for signature image to load (base64 images need time to render)
+                await page.waitForSelector('img[src^="data:image"]', {
+                    timeout: 5000
+                }).catch(() => {
+                    console.log("No signature image found or timeout");
+                });
+
+                // Give additional time for image rendering
+                await page.evaluate(() => {
+                    return new Promise((resolve) => {
+                        const img = document.querySelector('img[src^="data:image"]');
+                        if (img) {
+                            if (img.complete) {
+                                resolve();
+                            } else {
+                                img.onload = () => resolve();
+                                img.onerror = () => resolve();
+                            }
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+
                 pdfBuffer = await page.pdf({
                     format: "A4",
                     printBackground: true,
