@@ -9,7 +9,7 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'API Documentation- UltimateHealth',
-      version: '3.1.3',
+      version: '3.2.0',
     },
 
     servers: [{ url: `${url}/api` }],
