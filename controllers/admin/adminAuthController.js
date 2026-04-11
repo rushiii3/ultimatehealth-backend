@@ -4,17 +4,16 @@
 // moderator and admin logout
 // moderator account deletion
 const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
 const expressAsyncHandler = require("express-async-handler");
 const admin = require('../../models/admin/adminModel')
 const BlacklistedToken = require('../../models/blackListedToken');
-const jwt = require("jsonwebtoken");
 const User = require("../../models/UserModel");
-const Article = require('../../models/Articles');
-const statusEnum = require("../../utils/StatusEnum");
 const UnverifiedUser = require('../../models/UnverifiedUserModel');
-const AdminAggregate = require('../../models/events/adminContributionEvent');
 const { deleteFileFn } = require('../uploadController');
+const {
+  generateRefreshToken,
+  generateVerificationToken
+} = require("../../services/security/tokenService");
 
 
 module.exports.register = expressAsyncHandler(
@@ -59,9 +58,7 @@ module.exports.register = expressAsyncHandler(
       const hashedPassword = await bcrypt.hash(password, salt);
 
       // Generate a verification token
-      const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
+      const verificationToken = generateVerificationToken({ email });
 
       // Create new unverified user
       const adminuser = new admin({
@@ -105,7 +102,7 @@ module.exports.register = expressAsyncHandler(
       res.status(500).json({ error: "Internal server error" });
     }
   }
-)
+);
 
 module.exports.login = expressAsyncHandler(
   async (req, res) => {
@@ -142,20 +139,13 @@ module.exports.login = expressAsyncHandler(
         const blacklistedToken = new BlacklistedToken({ token: user.refreshToken });
         await blacklistedToken.save();
       }
-
-      // Generate JWT Access Token
-      const accessToken = jwt.sign(
-        { userId: user._id, email: user.email, role: 'admin' },
-        process.env.JWT_SECRET,
-        { expiresIn: "15m" } // Short-lived access token
-      );
-
+    
       // Generate Refresh Token
-      const refreshToken = jwt.sign(
-        { userId: user._id, email: user.email, role: 'admin' },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" } // Longer-lived refresh token
-      );
+      const refreshToken = generateRefreshToken({
+        userId: user._id,
+        email: user.email,
+        role: 'admin'
+      });
 
       // Store refresh token in the database
       user.refreshToken = refreshToken;
@@ -163,7 +153,8 @@ module.exports.login = expressAsyncHandler(
       await user.save();
 
       // Set cookies for tokens
-      res.cookie("accessToken", accessToken, { httpOnly: true, maxAge: 900000 }); // 15 minutes
+      // res.cookie("accessToken", accessToken, { httpOnly: true, maxAge: 900000 }); // 15 minutes
+      
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         maxAge: 604800000,
@@ -171,7 +162,7 @@ module.exports.login = expressAsyncHandler(
 
       res
         .status(200)
-        .json({ user, accessToken, refreshToken, message: "Login Successful" });
+        .json({ user, refreshToken, message: "Login Successful" });
     } catch (error) {
       console.log("Login Error", error);
 
@@ -182,19 +173,35 @@ module.exports.login = expressAsyncHandler(
       }
     }
   }
-)
+);
 
 module.exports.logout = expressAsyncHandler(
   async (req, res) => {
-
     try {
-      // Find the user and remove the refresh token
+      // Find the admin and remove the refresh token
       const user = await admin.findById(req.userId);
 
       if (user) {
-        // BlackList the token first
-        const blacklistedToken = new BlacklistedToken({ token: user.refreshToken });
-        await blacklistedToken.save();
+        // Get access token from request (used for authentication)
+        const accessToken = req.cookies.accessToken || req.headers['authorization']?.split(' ')[1];
+
+        // Blacklist both access and refresh tokens
+        const tokensToBlacklist = [];
+
+        if (accessToken) {
+          tokensToBlacklist.push({ token: accessToken });
+        }
+
+        if (user.refreshToken) {
+          tokensToBlacklist.push({ token: user.refreshToken });
+        }
+
+        // Bulk insert blacklisted tokens
+        if (tokensToBlacklist.length > 0) {
+          await BlacklistedToken.insertMany(tokensToBlacklist);
+        }
+
+        // Clear refresh token from admin document
         user.refreshToken = null;
         await user.save();
       }
@@ -205,10 +212,11 @@ module.exports.logout = expressAsyncHandler(
 
       res.status(200).json({ message: "Logout successful" });
     } catch (error) {
+      console.error("Admin Logout Error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
-)
+);
 
 module.exports.getprofile = expressAsyncHandler(
   async (req, res) => {
@@ -231,7 +239,7 @@ module.exports.getprofile = expressAsyncHandler(
     }
 
   }
-)
+);
 
 // update user password
 module.exports.updateAdminPassword = expressAsyncHandler(
@@ -327,28 +335,9 @@ module.exports.editProfile = expressAsyncHandler(
       res.status(500).json({ error: "Server error" });
     }
   }
-)
+);
 
-module.exports.logout = async (req, res) => {
-
-  try {
-    // Find the user and remove the refresh token
-    const user = await admin.findById(req.userId);
-    if (user) {
-      // BlackList the token first
-      const blacklistedToken = new BlacklistedToken({ token: user.refreshToken });
-      await blacklistedToken.save();
-      user.refreshToken = null;
-      await user.save();
-    }
-    // Clear cookies
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
-    res.status(200).json({ message: "Logout successful" });
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
+// Duplicate logout function removed - using expressAsyncHandler version above
 
 module.exports.deleteAdmin = expressAsyncHandler(
   async (req, res) => {
@@ -394,6 +383,6 @@ module.exports.deleteAdmin = expressAsyncHandler(
       res.status(500).json({ error: error.message });
     }
   }
-)
+);
 
 

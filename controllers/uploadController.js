@@ -14,6 +14,7 @@ const crypto = require('crypto');
 const puppeteer = require("puppeteer");
 const adminModel = require("../models/admin/adminModel");
 const jwt = require('jsonwebtoken');
+const { verifyAccessToken } = require('../services/security/tokenService');
 
 require('dotenv').config();
 
@@ -103,7 +104,7 @@ const getUserFromToken = (req) => {
     }
 
     const token = authHeader.split(" ")[1];
-    return jwt.verify(token, process.env.JWT_SECRET);
+    return verifyAccessToken(token);
 };
 
 // upload file

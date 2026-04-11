@@ -1,21 +1,24 @@
-const jwt = require('jsonwebtoken');
 const BlacklistedToken = require('../models/blackListedToken');
 const Admin = require("../models/admin/adminModel");
+const { verifyRefreshToken } = require("../services/security/tokenService");
 
 const adminAuthenticateToken = async (req, res, next) => {
-  const token = req.cookies.token || req.headers['authorization']?.split(' ')[1] || req.headers['authorization']?.split(' ')[2];
- // console.log('Token', token);
-  if (!token) return res.status(401).json({ error: 'No token provided' });
+  // Extract access token from cookies or Authorization header
+  const accessToken = req.cookies.accessToken || req.headers['authorization']?.split(' ')[1];
 
-  // check for blacklist
+  if (!accessToken) {
+    return res.status(401).json({ error: 'No access token provided' });
+  }
+
+  // Check for blacklist - Access tokens should be blacklisted on logout
   try {
-    const blacklistedToken = await BlacklistedToken.findOne({ token });
+    const blacklistedToken = await BlacklistedToken.findOne({ token: accessToken });
 
     if (blacklistedToken) {
-      return res.status(403).send('Token is blacklisted');
+      return res.status(403).json({ error: 'Token is blacklisted' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyRefreshToken(accessToken);
     const admin = await Admin.findById(decoded.userId);
     if (!admin || !admin.isVerified || admin.signature_url ===  "") {
       return res.status(403).json({ error: 'Either Email not verified or Admin not found' });

@@ -10,6 +10,10 @@ const cache = require('memory-cache');
 const statusEnum = require("../utils/StatusEnum");
 const cooldownTime = 3600;
 const path = require("path");
+const {
+  generateVerificationToken,
+  verifyVerificationToken
+} = require("../services/security/tokenService");
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -175,7 +179,7 @@ const resendVerificationEmail = async (req, res) => {
     return res.status(400).json({ message: 'User not found or already verified' });
   }
 
-  const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  const verificationToken = generateVerificationToken({ email });
   sendVerificationEmail(email, verificationToken, isAdmin);
 
   const cooldownKey = `resend-verification-email:${email}`;
@@ -198,7 +202,7 @@ const verifyEmail = async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyVerificationToken(token);
 
     if (isAdmin === 'true') {
       const user = await admin.findOne({ email: decoded.email });

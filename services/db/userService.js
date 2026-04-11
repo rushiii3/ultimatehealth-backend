@@ -1,6 +1,6 @@
 const User = require("../../models/UserModel");
 const UnverifiedUser = require("../../models/UnverifiedUserModel");
-const { generateAccessToken } = require("../security/tokenService");
+const { generateVerificationToken } = require("../security/tokenService");
 const {generateHashPassword} = require("../security/encryptService");
 
 
@@ -52,7 +52,7 @@ const createUnverifiedUser = async ({
 }) => {
 
     const hashedPassword = await generateHashPassword(password);
-    const verificationToken = generateAccessToken({ email }, "1h");
+    const verificationToken = generateVerificationToken({ email });
 
     const newUser = new UnverifiedUser({
         user_name: user_name,
@@ -210,8 +210,8 @@ const updateUserPassword = async (user, newPassword) => {
 
 }
 
-const updateUserOtp = async (user, otp, otpExpires) => {
-    user.otp = otp;
+const updateUserOtp = async (user, hashedOtp, otpExpires) => {
+    user.otp = hashedOtp;
     user.otpExpires = otpExpires;
     await user.save();
 }

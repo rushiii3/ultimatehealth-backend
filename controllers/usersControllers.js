@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel");
 const UnverifiedUser = require("../models/UnverifiedUserModel");
 const { verifyUser } = require("../middleware/authMiddleware");
@@ -12,6 +11,12 @@ const adminModel = require("../models/admin/adminModel");
 const BlacklistedToken = require('../models/blackListedToken');
 const expressAsyncHandler = require("express-async-handler");
 const { sendContributorVerificationEmail } = require("./emailservice");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  generateVerificationToken,
+  verifyRefreshToken,
+} = require("../services/security/tokenService");
 require("dotenv").config();
 
 module.exports.register = expressAsyncHandler(
@@ -69,9 +74,7 @@ module.exports.register = expressAsyncHandler(
       const hashedPassword = await bcrypt.hash(password, salt);
 
       // Generate a verification token
-      const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
+      const verificationToken = generateVerificationToken({ email });
       //  console.log("Verification token : ", verificationToken);
 
       // Create new unverified user
@@ -174,6 +177,7 @@ module.exports.checkUserHandle = expressAsyncHandler(
     }
   }
 )
+
 module.exports.getprofile = expressAsyncHandler(
   async (req, res) => {
     try {
@@ -286,7 +290,7 @@ module.exports.getTokenStatus = expressAsyncHandler(
     }
     try {
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = verifyRefreshToken(token);
       const now = Math.floor(Date.now() / 1000);
       if (decoded.exp && decoded.exp < now) {
         return res.status(200).json({
@@ -305,7 +309,6 @@ module.exports.getTokenStatus = expressAsyncHandler(
     }
   }
 )
-
 
 module.exports.sendOTPForForgotPassword = expressAsyncHandler(
   async (req, res) => {
@@ -332,8 +335,12 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
       const otp = generateOTP();
       const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
+      // Hash the OTP before storing
+      const salt = await bcrypt.genSalt(10);
+      const hashedOtp = await bcrypt.hash(otp, salt);
+
       if (user) {
-        user.otp = otp;
+        user.otp = hashedOtp;
         user.otpExpires = otpExpires;
         await user.save();
       } else {
@@ -341,7 +348,7 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
         if (!admin.isVerified) {
           return res.status(400).json({ message: "Admin is not verified." });
         }
-        admin.otp = otp;
+        admin.otp = hashedOtp;
         admin.otpExpires = otpExpires;
         await admin.save();
       }
@@ -413,7 +420,7 @@ module.exports.verifyOtpForForgotPassword = expressAsyncHandler(
       res.status(500).json({ message: "Internal server error" });
     }
   }
-)
+);
 
 module.exports.checkOtp = expressAsyncHandler(
   async (req, res) => {
@@ -430,13 +437,25 @@ module.exports.checkOtp = expressAsyncHandler(
         return res.status(401).json({ message: "User not found" });
       }
       if (user) {
+        // Check if OTP is expired
+        if (user.otpExpires < Date.now()) {
+          return res.status(400).json({ message: "Invalid or expired OTP." });
+        }
 
-        if (user.otp !== otp || user.otpExpires < Date.now()) {
+        // Verify hashed OTP
+        const isOtpValid = await bcrypt.compare(otp, user.otp);
+        if (!isOtpValid) {
           return res.status(400).json({ message: "Invalid or expired OTP." });
         }
       } else {
+        // Check if OTP is expired
+        if (!admin || admin.otpExpires < Date.now()) {
+          return res.status(400).json({ message: "Invalid or expired OTP." });
+        }
 
-        if (!admin || admin.otp !== otp || admin.otpExpires < Date.now()) {
+        // Verify hashed OTP
+        const isOtpValid = await bcrypt.compare(otp, admin.otp);
+        if (!isOtpValid) {
           return res.status(400).json({ message: "Invalid or expired OTP." });
         }
       }
@@ -462,7 +481,7 @@ module.exports.login = expressAsyncHandler(
       }
 
       let user = await User.findOne({ email: email });
-      console.log("User", user);
+   
       if (!user) {
         user = await UnverifiedUser.findOne({ email });
         if (!user) return res.status(404).json({ error: "User not found" });
@@ -476,8 +495,7 @@ module.exports.login = expressAsyncHandler(
           .status(403)
           .json({ error: "Email not verified. Please check your email." });
       }
-      // Although it is the only place where write once apply everywhere, but for the sake of  
-      // security, I use the below check for most APIs.
+   
       if (user.isBannedUser || user.isBlockUser) {
         return res.status(403).json({ error: "User is banned or blocked" });
       }
@@ -487,34 +505,25 @@ module.exports.login = expressAsyncHandler(
         return res.status(401).json({ error: "Invalid password" });
       }
 
-      // Blacklist the token
       if (user.refreshToken != null) {
         const blacklistedToken = new BlacklistedToken({ token: user.refreshToken });
         await blacklistedToken.save();
       }
 
-      // Generate JWT Access Token
-      const accessToken = jwt.sign(
-        { userId: user._id, email: user.email, role: 'user' },
-        process.env.JWT_SECRET,
-        { expiresIn: "15m" } // Short-lived access token
-      );
-
       // Generate Refresh Token
-      const refreshToken = jwt.sign(
-        { userId: user._id, email: user.email, role: 'user' },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
-      console.log("Generated Token:", accessToken);
-      console.log("Generated Refresh Token", refreshToken);
+      const refreshToken = generateRefreshToken({
+        userId: user._id,
+        email: user.email,
+        role: 'user'
+      });
+
       // Store refresh token in the database
       user.refreshToken = refreshToken;
       user.fcmToken = fcmToken;
       await user.save();
 
       // Set cookies for tokens
-      res.cookie("accessToken", accessToken, { httpOnly: true, maxAge: 900000 }); // 15 minutes
+      //res.cookie("accessToken", accessToken, { httpOnly: true, maxAge: 900000 }); // 15 minutes
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         maxAge: 604800000,
@@ -522,7 +531,7 @@ module.exports.login = expressAsyncHandler(
 
       res
         .status(200)
-        .json({ user, accessToken, refreshToken, message: "Login Successful" });
+        .json({ user, refreshToken, message: "Login Successful" });
     } catch (error) {
       console.log("Login Error", error);
 
@@ -533,23 +542,35 @@ module.exports.login = expressAsyncHandler(
       }
     }
   }
-)
+);
 
 module.exports.logout = expressAsyncHandler(
   async (req, res) => {
-
-
     try {
       // Find the user and remove the refresh token
       const user = await User.findById(req.userId);
 
-
       if (user) {
+        // Get access token from request (used for authentication)
+        const accessToken = req.cookies.accessToken || req.headers['authorization']?.split(' ')[1];
 
-        // BlackList the token first
-        const blacklistedToken = new BlacklistedToken({ token: user.refreshToken });
-        await blacklistedToken.save();
+        // Blacklist both access and refresh tokens
+        const tokensToBlacklist = [];
 
+        if (accessToken) {
+          tokensToBlacklist.push({ token: accessToken });
+        }
+
+        if (user.refreshToken) {
+          tokensToBlacklist.push({ token: user.refreshToken });
+        }
+
+        // Bulk insert blacklisted tokens
+        if (tokensToBlacklist.length > 0) {
+          await BlacklistedToken.insertMany(tokensToBlacklist);
+        }
+
+        // Clear refresh token from user document
         user.refreshToken = null;
         await user.save();
       }
@@ -560,10 +581,11 @@ module.exports.logout = expressAsyncHandler(
 
       res.status(200).json({ message: "Logout successful" });
     } catch (error) {
+      console.error("Logout Error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
-)
+);
 
 module.exports.refreshToken = expressAsyncHandler(
   async (req, res) => {
@@ -575,7 +597,7 @@ module.exports.refreshToken = expressAsyncHandler(
 
     try {
       // Verify the refresh token
-      const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+      const decoded = verifyRefreshToken(refreshToken);
 
       // Check if the refresh token is valid and associated with the user
       const user = await User.findOne({ _id: decoded.userId, refreshToken });
@@ -584,18 +606,18 @@ module.exports.refreshToken = expressAsyncHandler(
       }
 
       // Generate a new access token
-      const newAccessToken = jwt.sign(
-        { userId: user._id, email: user.email, role: 'user' },
-        process.env.JWT_SECRET,
-        { expiresIn: "15m" }
-      );
+      const newAccessToken = generateAccessToken({
+        userId: user._id,
+        email: user.email,
+        role: 'user'
+      });
 
       // Optionally, generate a new refresh token
-      const newRefreshToken = jwt.sign(
-        { userId: user._id, email: user.email, role: 'user' },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
+      const newRefreshToken = generateRefreshToken({
+        userId: user._id,
+        email: user.email,
+        role: 'user'
+      });
 
       // Update the refresh token in the database
       user.refreshToken = newRefreshToken;
@@ -617,7 +639,7 @@ module.exports.refreshToken = expressAsyncHandler(
       res.status(403).json({ error: "Invalid refresh token" });
     }
   }
-)
+);
 
 module.exports.deleteByUser = expressAsyncHandler(
   async (req, res) => {
@@ -668,7 +690,7 @@ module.exports.deleteByUser = expressAsyncHandler(
       res.status(500).json({ error: error.message });
     }
   }
-)
+);
 
 module.exports.deleteByAdmin = expressAsyncHandler(
   async (req, res) => {
@@ -692,7 +714,7 @@ module.exports.deleteByAdmin = expressAsyncHandler(
       res.json({ messge: error.message });
     }
   }
-)
+);
 // follow a user
 module.exports.follow = expressAsyncHandler(
   async (req, res) => {
@@ -791,7 +813,7 @@ module.exports.follow = expressAsyncHandler(
       res.status(500).json({ message: error.message });
     }
   }
-)
+);
 // Get Follower
 module.exports.getFollowers = expressAsyncHandler(
   async (req, res) => {
@@ -815,7 +837,7 @@ module.exports.getFollowers = expressAsyncHandler(
     }
     return res.status(200).json({ followers: author.followers });
   }
-)
+);
 // GET followings
 module.exports.getFollowings = expressAsyncHandler(
   async (req, res) => {
@@ -838,7 +860,7 @@ module.exports.getFollowings = expressAsyncHandler(
     }
     return res.status(200).json({ followers: author.followings });
   }
-)
+);
 
 // GET socials
 // type : 1 for followers, 2 for followings, 3 for contributors
@@ -916,7 +938,7 @@ module.exports.getSocials = expressAsyncHandler(
 
   }
 
-)
+);
 module.exports.getProfileImage = expressAsyncHandler(
   async (req, res) => {
     const userId = req.params.userId;
@@ -929,7 +951,7 @@ module.exports.getProfileImage = expressAsyncHandler(
     return res.status(200).json({ profile_image: author.Profile_image });
 
   }
-)
+);
 
 // get User Articles,
 module.exports.getUserWithArticles = expressAsyncHandler(
@@ -949,7 +971,7 @@ module.exports.getUserWithArticles = expressAsyncHandler(
       return res.status(500).json({ message: "Internal server error" });
     }
   }
-)
+);
 
 // get user like and save articles
 module.exports.getUserLikeAndSaveArticles = expressAsyncHandler(
@@ -997,7 +1019,7 @@ module.exports.getUserLikeAndSaveArticles = expressAsyncHandler(
       return res.status(500).json({ message: "Internal server error" });
     }
   }
-)
+);
 
 //update read article
 /*
@@ -1149,7 +1171,7 @@ module.exports.updateProfileImage = expressAsyncHandler(
       res.status(500).json({ error: "Internal server error" });
     }
   }
-)
+);
 
 // get user details
 module.exports.getUserDetails = expressAsyncHandler(
@@ -1191,7 +1213,7 @@ module.exports.getUserDetails = expressAsyncHandler(
       res.status(500).json({ error: error.message });
     }
   }
-)
+);
 
 // update user general details
 module.exports.updateUserGeneralDetails = expressAsyncHandler(
@@ -1268,7 +1290,7 @@ module.exports.updateUserGeneralDetails = expressAsyncHandler(
     }
   }
 
-)
+);
 // update user contact details
 module.exports.updateUserContactDetails = expressAsyncHandler(
   async (req, res) => {
@@ -1348,7 +1370,7 @@ module.exports.updateUserContactDetails = expressAsyncHandler(
       res.status(500).json({ error: "Internal server error" });
     }
   }
-)
+);
 
 // update user Professional details
 module.exports.updateUserProfessionalDetails = expressAsyncHandler(
@@ -1388,7 +1410,7 @@ module.exports.updateUserProfessionalDetails = expressAsyncHandler(
       res.status(500).json({ error: "Internal server error" });
     }
   }
-)
+);
 
 // update user password
 module.exports.updateUserPassword = expressAsyncHandler(
