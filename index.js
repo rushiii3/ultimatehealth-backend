@@ -1,5 +1,4 @@
 const express = require('express');
-const expressAsyncHandler = require('express-async-handler');
 
 const compression = require('compression');
 const cors = require('cors');
@@ -45,6 +44,7 @@ const {
     userFollowNotification,
     articleSubmitNotificationsToAdmin
 } = require('./controllers/notifications/notificationHelper');
+const {verifyRefreshToken } = require("./services/security/tokenService");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -53,7 +53,7 @@ const app = express();
 dotenv.config();
 db.dbConnect();
 
-const port = process.env.PORT | 8080;
+const port = process.env.PORT || 8080;
 const url = process.env.PROD_URL;
 app.use(express.static('public'));
 
@@ -119,19 +119,83 @@ const server = app.listen(port, () => {
     console.log(`Docs: ${url}/docs`);
 })
 
-let io = require('socket.io')(server);
+let io = require('socket.io')(server, {
+    cors: {
+        origin: ["http://uhsocial.in", "https://uhsocial.in"],
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
 
+// Optional Authentication Middleware
+io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
 
+    if (token) {
+        try {
+            // Verify JWT token
+
+            const decoded = verifyRefreshToken(token);
+            socket.userId = decoded.userId || decoded.id;
+            socket.isAuthenticated = true;
+            console.log(` Authenticated user connected: ${socket.userId} (Socket: ${socket.id})`);
+        } catch (err) {
+            // Invalid token - log but still allow connection (backward compatible)
+            console.log(`  Invalid token provided, proceeding without authentication (Socket: ${socket.id})`);
+            socket.isAuthenticated = false;
+        }
+    } else {
+        // No token - allow connection as of now
+        socket.isAuthenticated = false;
+        console.log(`ℹ  Unauthenticated connection allowed (Socket: ${socket.id})`);
+    }
+
+    // as of now
+    next();
+});
 
 
 io.on('connection', (socket) => {
 
     console.log('a user connected');
 
-    socket.on('connect', () => {
-        console.log('Connected to server');
-        socket.emit("connect", "Some thing to show");
-    });
+  
+    if (socket.isAuthenticated) {
+        console.log(`🔐 Authenticated socket: ${socket.id} | User ID: ${socket.userId}`);
+    }
+
+   
+    const isAuthenticated = () => socket.isAuthenticated === true;
+
+
+    const logSecurityEvent = (action, userId, details = {}) => {
+        const timestamp = new Date().toISOString();
+        const authStatus = socket.isAuthenticated ? '✅ AUTH' : '⚠️  UNAUTH';
+        console.log(`[${timestamp}] ${authStatus} | Socket: ${socket.id} | User: ${userId || 'anonymous'} | Action: ${action}`, details);
+    };
+
+    // Room management helper functions
+    const getRoomName = (articleId, podcastId) => {
+        if (articleId) return `article:${articleId}`;
+        if (podcastId) return `podcast:${podcastId}`;
+        return null;
+    };
+
+    const joinRoom = (articleId, podcastId) => {
+        const roomName = getRoomName(articleId, podcastId);
+        if (roomName) {
+            socket.join(roomName);
+            console.log(`Socket ${socket.id} joined room: ${roomName}`);
+        }
+        return roomName;
+    };
+
+    const broadcastToRoom = (roomName, event, data) => {
+        if (roomName) {
+            // Broadcast to room (other users in the same article/podcast)
+            socket.to(roomName).emit(event, data);
+        }
+    };
 
     /*
     socket.on('new-user', (username, userId)=>{
@@ -140,18 +204,39 @@ io.on('connection', (socket) => {
        */
 
     socket.on("notification", (data) => {
-        // get receiver info
-        // const receiverInfo = getUser(receiver);
-        // console.log(type, "received");
+        // Save notification to database AND broadcast to user's notification room
+
         if (data.type === 'openPost') {
             console.log('open post notification');
             sendPostNotification(data.userId, data.articleId,
                 data.articleRecordId, data.podcastId,
                 data.requestId, data.title, data.message, data.authorTitle, data.authorMessage);
+
+            // Real-time broadcast to target user
+            if (data.targetUserId) {
+                io.to(`user:${data.targetUserId}`).emit('notification', {
+                    type: 'openPost',
+                    title: data.title,
+                    message: data.message,
+                    articleId: data.articleId,
+                    podcastId: data.podcastId
+                });
+            }
         }
         else if (data.type === 'likePost') {
             console.log('like post notification');
             sendPostLikeNotification(data.userId, data.articleId, data.podcastId, data.articleRecordId, data.title, data.message);
+
+            // Real-time broadcast to target user
+            if (data.targetUserId) {
+                io.to(`user:${data.targetUserId}`).emit('notification', {
+                    type: 'likePost',
+                    title: data.title,
+                    message: data.message,
+                    articleId: data.articleId,
+                    podcastId: data.podcastId
+                });
+            }
         }
         else if (data.type === 'commentPost') {
             console.log('comment post notification');
@@ -166,15 +251,47 @@ io.on('connection', (socket) => {
                 data.title,
                 data.message
             );
+
+            // Real-time broadcast to target user
+            if (data.targetUserId) {
+                io.to(`user:${data.targetUserId}`).emit('notification', {
+                    type: 'commentPost',
+                    title: data.title,
+                    message: data.message,
+                    articleId: data.articleId,
+                    podcastId: data.podcastId,
+                    commentId: data.commentId
+                });
+            }
         }
         else if (data.type === 'commentLikePost') {
             console.log('comment like post notification');
             sendCommentLikeNotification(data.userId, data.articleId,
                 data.podcastId, data.articleRecordId, data.commentId, data.title, data.message);
+
+            // Real-time broadcast to target user
+            if (data.targetUserId) {
+                io.to(`user:${data.targetUserId}`).emit('notification', {
+                    type: 'commentLikePost',
+                    title: data.title,
+                    message: data.message,
+                    articleId: data.articleId,
+                    commentId: data.commentId
+                });
+            }
         }
         else if (data.type === 'userFollow') {
             console.log('user follow notification');
             userFollowNotification(data.userId, data.message);
+
+            // Real-time broadcast to target user
+            if (data.targetUserId) {
+                io.to(`user:${data.targetUserId}`).emit('notification', {
+                    type: 'userFollow',
+                    message: data.message,
+                    fromUserId: data.userId
+                });
+            }
         }
         else if (data.type === "repost") {
             console.log("repost notification");
@@ -190,17 +307,32 @@ io.on('connection', (socket) => {
                 data.authorMessage.message
             );
 
-            // repostNotification(data.userId, data.authorId, data.postId, data.message, data.authorMessage);
+            // Real-time broadcast to author and original poster
+            if (data.authorId) {
+                io.to(`user:${data.authorId}`).emit('notification', {
+                    type: 'repost',
+                    title: data.authorMessage.title,
+                    message: data.authorMessage.message,
+                    postId: data.postId,
+                    fromUserId: data.userId
+                });
+            }
         }
-        // io.to(receiverInfo.socketId).emit("notification", {sender, message, title});
     })
-    socket.on('comment', expressAsyncHandler(
-        async (data) => {
+    socket.on('comment', async (data) => {
 
             socket.emit("comment-processing", true);
 
             // console.log('Add Event called');
             const { podcastId, userId, articleId, content, parentCommentId, mentionedUsers } = data;
+
+            // Security logging
+            logSecurityEvent('COMMENT_CREATE', userId, {
+                articleId,
+                podcastId,
+                isReply: !!parentCommentId,
+                authenticated: isAuthenticated()
+            });
 
             if (!userId || !content || content.trim() === '') {
                 socket.emit("comment-processing", false);
@@ -269,7 +401,7 @@ io.on('connection', (socket) => {
                 // Now emit event
 
                 if (parentCommentId) {
-                    const parentComment = Comment.findById(parentCommentId);
+                    const parentComment = await Comment.findById(parentCommentId);
 
                     if (!parentComment || parentComment.is_removed) {
                         socket.emit("comment-processing", false);
@@ -279,10 +411,15 @@ io.on('connection', (socket) => {
                     parentComment.replies.push(newComment._id);
                     await parentComment.save();
 
-                    socket.emit('update-parent-comment', {
+                    const updateData = {
                         parentCommentId: parentComment._id,
                         parentComment
-                    });
+                    };
+                    socket.emit('update-parent-comment', updateData);
+
+                    // Broadcast to room (other users)
+                    const roomName = getRoomName(articleId, podcastId);
+                    broadcastToRoom(roomName, 'update-parent-comment', updateData);
 
                     // reply
 
@@ -292,12 +429,17 @@ io.on('connection', (socket) => {
                         .exec();
 
                     socket.emit("comment-processing", false);
-                    socket.emit('comment', {
+
+                    const commentData = {
                         parentCommentId: parentCommentId,
                         reply: populatedComment,
                         articleId: articleId,
                         podcastId: podcastId
-                    });
+                    };
+                    socket.emit('comment', commentData);
+
+                    // Broadcast to room (other users)
+                    broadcastToRoom(roomName, 'comment', commentData);
 
                     if (article && articleId) {
 
@@ -312,6 +454,16 @@ io.on('connection', (socket) => {
                             `${user.user_handle} replied to your comment`,
                             content
                         );
+
+                        // Real-time notification to parent comment owner
+                        io.to(`user:${parentComment.userId}`).emit('notification', {
+                            type: 'commentReply',
+                            title: 'New Reply',
+                            message: `${user.user_handle} replied to your comment`,
+                            articleId: articleId,
+                            commentId: parentComment._id,
+                            replyId: populatedComment._id
+                        });
                     }
                     else if (podcastId) {
                         sendCommentNotification(
@@ -325,6 +477,16 @@ io.on('connection', (socket) => {
                             `${user.user_handle} replied to your comment`,
                             content
                         );
+
+                        // Real-time notification to parent comment owner
+                        io.to(`user:${parentComment.userId}`).emit('notification', {
+                            type: 'commentReply',
+                            title: 'New Reply',
+                            message: `${user.user_handle} replied to your comment`,
+                            podcastId: podcastId,
+                            commentId: parentComment._id,
+                            replyId: populatedComment._id
+                        });
                     }
 
                 } else {
@@ -335,11 +497,17 @@ io.on('connection', (socket) => {
                         .exec();
 
                     socket.emit("comment-processing", false);
-                    socket.emit('comment', {
+
+                    const commentData = {
                         comment: populatedComment,
                         articleId,
                         podcastId
-                    });
+                    };
+                    socket.emit('comment', commentData);
+
+                    // Broadcast to room (other users)
+                    const roomName = getRoomName(articleId, podcastId);
+                    broadcastToRoom(roomName, 'comment', commentData);
 
                     /** Send Mention Notification */
                     if (mentionedUsers && Array.isArray(mentionedUsers) && mentionedUsers.length > 0) {
@@ -372,6 +540,15 @@ io.on('connection', (socket) => {
                             content
                         );
 
+                        // Real-time notification to article author
+                        io.to(`user:${article.authorId}`).emit('notification', {
+                            type: 'newComment',
+                            title: 'New Comment',
+                            message: `${user.user_handle} commented on your post`,
+                            articleId: article._id,
+                            commentId: populatedComment._id
+                        });
+
                     } else if (podcast && podcastId) {
                         sendCommentNotification(
                             null,
@@ -384,6 +561,15 @@ io.on('connection', (socket) => {
                             `${user.user_handle} commented on your podcast`,
                             content
                         );
+
+                        // Real-time notification to podcast author
+                        io.to(`user:${podcast.user_id}`).emit('notification', {
+                            type: 'newComment',
+                            title: 'New Comment',
+                            message: `${user.user_handle} commented on your podcast`,
+                            podcastId: podcastId,
+                            commentId: populatedComment._id
+                        });
                     }
                 }
 
@@ -393,14 +579,20 @@ io.on('connection', (socket) => {
                 socket.emit('error', { message: 'Error adding comment' });
                 socket.emit("comment-processing", false);
             }
-        }
-    ))
+    });
 
-    socket.on('edit-comment', expressAsyncHandler(
-        async (data) => {
+    socket.on('edit-comment', async (data) => {
 
             socket.emit("edit-comment-processing", true);
             const { podcastId, commentId, content, articleId, userId } = data;
+
+            // Security logging
+            logSecurityEvent('COMMENT_EDIT', userId, {
+                commentId,
+                articleId,
+                podcastId,
+                authenticated: isAuthenticated()
+            });
 
             // console.log("Comment Id", commentId);
             //  console.log("Content", content);
@@ -467,21 +659,30 @@ io.on('connection', (socket) => {
                     .exec();
 
                 socket.emit("edit-comment-processing", false);
-                socket.emit('edit-comment', populatedComment); // Broadcast the edited comment
+                socket.emit('edit-comment', populatedComment);
+
+                // Broadcast to room (other users)
+                const roomName = getRoomName(articleId, podcastId);
+                broadcastToRoom(roomName, 'edit-comment', populatedComment);
             } catch (err) {
                 console.error("Error editing comment:", err);
                 socket.emit("edit-comment-processing", false);
                 socket.emit('error', { message: 'Error editing comment' });
             }
+    });
 
-        }
-    ));
-
-    socket.on('delete-comment', expressAsyncHandler(
-        async (data) => {
+    socket.on('delete-comment', async (data) => {
 
             socket.emit("delete-comment-processing", true);
             const { commentId, podcastId, articleId, userId } = data;
+
+            // Security logging
+            logSecurityEvent('COMMENT_DELETE', userId, {
+                commentId,
+                articleId,
+                podcastId,
+                authenticated: isAuthenticated()
+            });
 
             if (!commentId || !userId) {
                 socket.emit("delete-comment-processing", false);
@@ -524,32 +725,38 @@ io.on('connection', (socket) => {
                 await comment.save();
 
                 // If it's a reply, update the parent comment
+                const roomName = getRoomName(articleId, podcastId);
                 if (comment.parentCommentId) {
                     const parentComment = await Comment.findById(comment.parentCommentId);
-                    if (parentComment || !parentComment.is_removed) {
+                    if (parentComment && !parentComment.is_removed) {
                         parentComment.replies = parentComment.replies.filter(replyId => replyId.toString() !== commentId);
                         await parentComment.save();
 
                         socket.emit("delete-comment-processing", false);
-                        socket.emit('delete-parent-comment', {
+                        const parentData = {
                             parentCommentId: comment.parentCommentId,
                             parentComment
-                        });
+                        };
+                        socket.emit('delete-parent-comment', parentData);
 
+                        // Broadcast to room (other users)
+                        broadcastToRoom(roomName, 'delete-parent-comment', parentData);
                     }
                 }
                 socket.emit("delete-comment-processing", false);
-                socket.emit('delete-comment', { commentId, articleId, podcastId });
+                const deleteData = { commentId, articleId, podcastId };
+                socket.emit('delete-comment', deleteData);
+
+                // Broadcast to room (other users)
+                broadcastToRoom(roomName, 'delete-comment', deleteData);
             } catch (err) {
                 console.error('Error deleting comment:', err);
                 socket.emit("delete-comment-processing", false);
                 socket.emit('error', { message: 'Error deleting comment' });
             }
-        }
-    ));
+    });
 
-    socket.on('like-comment', expressAsyncHandler(
-        async (data) => {
+    socket.on('like-comment', async (data) => {
             const { commentId, articleId, podcastId, userId } = data;
 
             socket.emit("like-comment-processing", true);
@@ -633,6 +840,15 @@ io.on('connection', (socket) => {
                             `${user.user_handle} liked your comment`,
                             `${populatedComment.content}`
                         );
+
+                        // Real-time notification to comment owner
+                        io.to(`user:${populatedComment.userId._id}`).emit('notification', {
+                            type: 'commentLike',
+                            title: 'Comment Liked',
+                            message: `${user.user_handle} liked your comment`,
+                            articleId: articleId,
+                            commentId: populatedComment._id
+                        });
                     } else if (podcastId) {
 
                         sendCommentLikeNotification(
@@ -644,22 +860,33 @@ io.on('connection', (socket) => {
                             `${user.user_handle} liked your comment`,
                             `${populatedComment.content}`
                         );
+
+                        // Real-time notification to comment owner
+                        io.to(`user:${populatedComment.userId._id}`).emit('notification', {
+                            type: 'commentLike',
+                            title: 'Comment Liked',
+                            message: `${user.user_handle} liked your comment`,
+                            podcastId: podcastId,
+                            commentId: populatedComment._id
+                        });
                     }
 
                 }
                 socket.emit("like-comment-processing", false);
                 socket.emit('like-comment', populatedComment);
+
+                // Broadcast to room (other users)
+                const roomName = getRoomName(articleId, podcastId);
+                broadcastToRoom(roomName, 'like-comment', populatedComment);
             } catch (err) {
                 console.error('Error liking/unliking comment:', err);
                 socket.emit("like-comment-processing", false);
                 socket.emit('error', { message: 'Error processing like/unlike' });
             }
-        }
-    ));
+    });
 
 
-    socket.on('fetch-comments', expressAsyncHandler(
-        async (data) => {
+    socket.on('fetch-comments', async (data) => {
             const { articleId, podcastId } = data;
             socket.emit("fetch-comment-processing", true);
             ///console.log("fetch comment called", articleId);
@@ -671,6 +898,8 @@ io.on('connection', (socket) => {
             }
 
             try {
+
+                // Join the room for this article/podcast
 
                 let article, podcast;
 
@@ -744,13 +973,10 @@ io.on('connection', (socket) => {
                 socket.emit("fetch-comment-processing", false);
                 socket.emit('error', { message: 'Error fetching comments.' });
             }
-        }
-    ));
+    });
 
     // add-review-comment (only article specific)
-    socket.on('add-review-comment', expressAsyncHandler(
-
-        async (data) => {
+    socket.on('add-review-comment', async (data) => {
             const { articleId, reviewer_id, feedback, isReview, isNote, requestId } = data;
 
             if (!reviewer_id || !feedback) {
@@ -1000,9 +1226,7 @@ io.on('connection', (socket) => {
                 console.log(err);
                 socket.emit('error', { message: err.message });
             }
-        }
-
-    ));
+    });
     // load-review-comments (only article specific)
 
     socket.on('load-review-comments',
@@ -1102,8 +1326,40 @@ io.on('connection', (socket) => {
 
     );
 
+    // User notification room - join when user connects
+    socket.on('join-user-notifications', (data) => {
+        const { userId } = data;
+        if (userId) {
+            const userRoom = `user:${userId}`;
+            socket.join(userRoom);
+            console.log(`Socket ${socket.id} joined notification room: ${userRoom}`);
+            socket.emit('notification-room-joined', { room: userRoom, userId });
+        }
+    });
+
+    // Manual join room listener (optional - for explicit room joining)
+    socket.on('join-room', (data) => {
+        const { articleId, podcastId } = data;
+        const roomName = joinRoom(articleId, podcastId);
+        if (roomName) {
+            socket.emit('room-joined', { room: roomName });
+        }
+    });
+
+    // Manual leave room listener
+    socket.on('leave-room', (data) => {
+        const { articleId, podcastId } = data;
+        const roomName = getRoomName(articleId, podcastId);
+        if (roomName) {
+            socket.leave(roomName);
+            console.log(`Socket ${socket.id} left room: ${roomName}`);
+            socket.emit('room-left', { room: roomName });
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected');
+        // Socket.IO automatically removes user from all rooms on disconnect
         // removeUser(socket.id);
     });
 
