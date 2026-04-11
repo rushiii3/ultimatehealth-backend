@@ -295,11 +295,62 @@ const uploadAgreementPDF = expressAsyncHandler(
 
            
           
-            // Add print-specific styles for proper page breaks
+            // Add print-specific styles for proper page breaks and full content display
             const cleanedHtml = html
                 .replace(/max-height:\s*500px;/g, 'max-height: none;')
+                .replace(/max-height:\s*400px;/g, 'max-height: none;')
                 .replace(/overflow-y:\s*auto;/g, 'overflow-y: visible;')
+                .replace(/overflow:\s*hidden;/g, 'overflow: visible;')
                 .replace(/<\/style>/, `
+                    /* PDF-specific styles - remove all scrollable/height restrictions */
+                    body {
+                        background: white !important;
+                        padding: 0 !important;
+                        min-height: auto !important;
+                        display: block !important;
+                    }
+                    .agreement-container {
+                        max-width: 100% !important;
+                        width: 100% !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important;
+                        overflow: visible !important;
+                    }
+                    .content {
+                        max-height: none !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        overflow-y: visible !important;
+                        page-break-inside: auto;
+                        padding: 20px 40px !important;
+                    }
+                    .header {
+                        page-break-after: avoid;
+                    }
+                    h2 {
+                        page-break-after: avoid;
+                        page-break-inside: avoid;
+                        margin-top: 20px;
+                    }
+                    .highlight {
+                        page-break-inside: avoid;
+                    }
+                    ul, ol {
+                        page-break-inside: auto;
+                    }
+                    li {
+                        page-break-inside: avoid;
+                    }
+                    .signature-section {
+                        page-break-before: auto;
+                        page-break-inside: avoid;
+                    }
+                    .footer-section {
+                        page-break-inside: avoid;
+                    }
+                    .btn, .btn-clear {
+                        display: none !important;
+                    }
                     @media print {
                         body {
                             background: white !important;
@@ -310,33 +361,6 @@ const uploadAgreementPDF = expressAsyncHandler(
                             max-height: none !important;
                             overflow: visible !important;
                             page-break-inside: auto;
-                        }
-                        h2 {
-                            page-break-after: avoid;
-                            page-break-inside: avoid;
-                        }
-                        .highlight {
-                            page-break-inside: avoid;
-                        }
-                        ul, ol {
-                            page-break-inside: auto;
-                        }
-                        li {
-                            page-break-inside: avoid;
-                        }
-                        .signature-section {
-                            page-break-before: auto;
-                            page-break-inside: avoid;
-                        }
-                        .footer-section {
-                            page-break-inside: avoid;
-                        }
-                        .agreement-container {
-                            box-shadow: none !important;
-                            border-radius: 0 !important;
-                        }
-                        .btn, .btn-clear {
-                            display: none !important;
                         }
                     }
                 </style>`);
@@ -350,6 +374,28 @@ const uploadAgreementPDF = expressAsyncHandler(
             try {
                 await page.setContent(cleanedHtml, {
                     waitUntil: "networkidle0",
+                });
+
+                // Force full content visibility by removing height restrictions
+                await page.evaluate(() => {
+                    // Remove all max-height and overflow constraints
+                    const contentDiv = document.querySelector('.content');
+                    if (contentDiv) {
+                        contentDiv.style.maxHeight = 'none';
+                        contentDiv.style.height = 'auto';
+                        contentDiv.style.overflow = 'visible';
+                        contentDiv.style.overflowY = 'visible';
+                    }
+
+                    const container = document.querySelector('.agreement-container');
+                    if (container) {
+                        container.style.overflow = 'visible';
+                        container.style.maxWidth = '100%';
+                    }
+
+                    // Ensure body shows all content
+                    document.body.style.overflow = 'visible';
+                    document.body.style.height = 'auto';
                 });
 
                 // Wait for signature image to load (base64 images need time to render)
@@ -386,6 +432,7 @@ const uploadAgreementPDF = expressAsyncHandler(
                         left: '15mm'
                     },
                     preferCSSPageSize: false,
+                    omitBackground: false,
                 });
 
             } finally {
