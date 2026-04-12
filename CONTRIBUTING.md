@@ -14,8 +14,7 @@ We welcome contributions from everyone — whether you're a student, beginner, o
 - [Development Setup](#development-setup)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Commit Message Guidelines](#commit-message-guidelines)
-- [Good First Issues](#good-first-issues)
-- [Questions?](#questions)
+
 
 ---
 
@@ -47,19 +46,22 @@ You can contribute in many ways:
    ```bash
    git clone https://github.com/yourusername/ultimatehealth-backend.git
    cd ultimatehealth-backend```
-3. Create a new branch from **main**
+
+## Development Setup
+
+1. Create a new branch from **main**
    ```
    git checkout main
    git checkout -b feature/your-feature-name #Example: feature/add-article-endpoint
    ```
-4. Install dependencies
+2. Install dependencies
 
 ```bash
    yarn install
    replace your .env
 ```
 
-5. Create **.env** file (see **.env.example**)
+3. Create **.env** file (see **.env.example**)
 
 ```bash
 PORT=YOUR_PORT_HERE
@@ -128,3 +130,83 @@ ultimatehealth-backend/
 1. Push your branch to your fork:
    ```bash
    git push origin feature/your-feature-name
+2. Go to the original repository **(SB2318/ultimatehealth-backend)** and open a Pull Request:
+
+3.  Go to the original repository: `SB2318/ultimatehealth-backend`
+
+4. Click on **"New Pull Request"** or **"Compare & pull request"**.
+
+5. Fill in the PR template with the following details:
+
+   - **Title:**  
+     Clear and descriptive (e.g., `feat: add article creation endpoint`)
+
+   - **Description:**  
+     Explain what changes you made and why.
+
+   - **Issue Reference:**  
+     Mention the issue it resolves (if any) using:  
+     `Closes #issue-number`
+
+   - **Additional Details:**  
+     Add screenshots or testing steps if applicable.
+
+## PR Title Format (Recommended)
+
+Use these prefixes for better clarity:
+
+- `feat:`     → New feature  
+- `fix:`      → Bug fix  
+- `docs:`     → Documentation changes  
+- `refactor:` → Code refactoring  
+- `style:`    → Code style changes  
+- `test:`     → Adding or updating tests  
+- `chore:`    → Maintenance tasks  
+
+### Examples
+
+- `feat: add user profile update endpoint`  
+- `fix: resolve JWT refresh token error`  
+- `docs: update Swagger documentation for auth routes`  
+
+## Commit Message Guidelines
+
+We follow **Conventional Commits**:
+
+| Type       | Description                     |
+|------------|---------------------------------|
+| `feat:`     | New feature                     |
+| `fix:`      | Bug fix                         |
+| `docs:`     | Documentation changes           |
+| `style:`    | Code formatting                 |
+| `refactor:` | Code refactoring                |
+| `test:`     | Adding or updating tests        |
+| `chore:`    | Maintenance tasks               |
+
+## Examples
+
+```bash
+feat: implement content moderation API
+fix: handle missing fields in article creation
+docs: update README with correct setup instructions
+refactor: improve error handling in auth middleware
+```
+
+---
+## What Happens Next?
+
+- Your PR will be reviewed by the maintainers.  
+- You may be asked to make changes based on the review feedback.  
+- Once approved, your PR will be merged into the main branch.  
+
+---
+
+## Thank You 🙌
+
+Thank you for contributing!  
+Your efforts help make **UltimateHealth Backend** better for everyone.  
+
+
+
+
+
