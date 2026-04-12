@@ -44,6 +44,12 @@ Provides secure, scalable REST APIs for:
 - Admin & user analytics
 - Reporting & safety features
 
+##  Submodule Repositories
+
+- **Frontend Repository**: [ultimatehealth-app](https://github.com/SB2318/UltimateHealth)
+- **Admin Repository**:  [ultimatehealth-admin](https://github.com/SB2318/ultimatehealth-admin-app)
+- **Content Checker Repository**:  [content-checker](https://github.com/SB2318/VeriWise-Content-Check)
+
 ---
 
 ## ✨ Key Features
