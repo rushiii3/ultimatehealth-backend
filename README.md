@@ -118,7 +118,7 @@ We welcome contributions! This backend is open for **students, developers, and o
 
 - Read our **[CONTRIBUTING.md](./CONTRIBUTING.md)** for detailed guidelines.
 - Look for issues labeled with **`good-first-issue`** — perfect for beginners.
-- Always create Pull Requests targeting the **`develop`** branch.
+
 
 ### Popular Contribution Areas
 
