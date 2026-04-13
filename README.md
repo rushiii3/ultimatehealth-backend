@@ -1,14 +1,20 @@
-# UltimateHealth Backend 
+<h1 align="center"> UltimateHealth Backend</h1>
+
+<div align="center">
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
 [![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
 [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongodb.com)
 [![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](https://swagger.io)
 
+<br/>
+
 [![Live Web Demo](https://img.shields.io/badge/Live%20Web%20Demo-4CAF50?style=for-the-badge&logo=globe&logoColor=white)](https://uhsocial.in)
 [![Android App](https://img.shields.io/badge/Android%20App-Play%20Store-34A853?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.anonymous.UltimateHealth)
 [![API Docs](https://img.shields.io/badge/API%20Docs-007ACC?style=for-the-badge&logo=swagger&logoColor=white)](https://uhsocial.in/docs)
 [![Content API](https://img.shields.io/badge/Content%20API-FF6B00?style=for-the-badge&logo=python&logoColor=white)](https://uhsocial.in/content-intel/docs)
+
+</div>
 
 
 <div align="center">
@@ -18,18 +24,25 @@
     <td align="center"><b>🌟 Stars</b></td>
     <td align="center"><b>🍴 Forks</b></td>
     <td align="center"><b>🐛 Issues</b></td>
-    <td align="center"><b>🔄 Open PRs</b></td>
-    <td align="center"><b>✅ Closed PRs</b></td>
-    <td align="center"><b>⏱️ Last Commit</b></td>
   </tr>
   <tr>
     <td align="center"><img alt="License" src="https://img.shields.io/github/license/SB2318/ultimateHealth-backend?style=flat&logo=github&color=success"/></td>
     <td align="center"><img alt="Stars" src="https://img.shields.io/github/stars/SB2318/ultimateHealth-backend?style=flat&logo=github&color=success"/></td>
     <td align="center"><img alt="Forks" src="https://img.shields.io/github/forks/SB2318/ultimateHealth-backend?style=flat&logo=github"/></td>
     <td align="center"><img alt="Issues" src="https://img.shields.io/github/issues/SB2318/ultimateHealth-backend?style=flat&logo=github"/></td>
+  </tr>
+
+  <tr>
+    <td align="center"><b>🔄 Open PRs</b></td>
+    <td align="center"><b>✅ Closed PRs</b></td>
+    <td align="center"><b>⏱️ Last Commit</b></td>
+   
+  </tr>
+  <tr>
     <td align="center"><img alt="Open PRs" src="https://img.shields.io/github/issues-pr/SB2318/ultimateHealth-backend?style=flat&logo=github"/></td>
     <td align="center"><img alt="Closed PRs" src="https://img.shields.io/github/issues-pr-closed/SB2318/ultimateHealth-backend?style=flat&color=critical&logo=github"/></td>
     <td align="center"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/SB2318/ultimateHealth-backend?style=flat&color=informational&logo=github"/></td>
+    
   </tr>
 </table>
 </div>
