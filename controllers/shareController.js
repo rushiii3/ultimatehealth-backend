@@ -445,8 +445,8 @@ function generateProfessionalHTML(article, dynamicLink) {
         <h1>${article.title}</h1>
         <p>${article.description}</p>
 
-        <a href="${dynamicLink}" class="btn primary">
-          Open in UltimateHealth App
+        <a href="https://uhsocial.in/api/share/blog/${article.pb_recordId}" class="btn primary">
+          See the blog
         </a>
 
         <a href="https://play.google.com/store/apps/details?id=com.anonymous.UltimateHealth"
