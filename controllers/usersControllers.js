@@ -1,1475 +1,1128 @@
-const mongoose = require("mongoose");
-const User = require("../models/UserModel");
-const UnverifiedUser = require("../models/UnverifiedUserModel");
-const { verifyUser } = require("../middleware/authMiddleware");
-const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
-const moment = require("moment");
-const Article = require("../models/Articles");
-const Podcast = require("../models/Podcast");
-const adminModel = require("../models/admin/adminModel");
-const BlacklistedToken = require('../models/blackListedToken');
 const expressAsyncHandler = require("express-async-handler");
-const { sendContributorVerificationEmail } = require("./emailservice");
+const {
+  createUnverifiedUser,
+  findUserById,
+  findUnverifiedUserByEmail,
+  findUnverifiedUserByHandle,
+  findUserByEmail,
+  findUserByHandle,
+  checkExistingUser,
+  getMyProfile,
+  getPublicProfile,
+  // isSamePassword,
+  updateUserPassword,
+  updateUserOtp,
+  loginUser,
+  deleteUserByEmail,
+  followUser,
+  unfollowUser,
+  getUserSocialData,
+  getUserArticles,
+  getUserLikeAndSaveArticleData,
+  checkEmailExists,
+  checkUserHandleExists,
+  clearOtpUser,
+  incrementOtpAttemptsUser,
+  updateUserPasswordAndClearOtp,
+  logoutUser,
+  deleteUserById
+} = require("../services/db/userService");
+
+const {
+  findAdminByEmail,
+  findAdminByHandle,
+  updateAdminOtp,
+  checkExistingAdmin,
+  clearOtpAdmin,
+  incrementOtpAttemptsAdmin,
+  logoutAdmin
+} = require("../services/db/adminService");
+const { blackListToken, addTokenToBlacklist } = require("../services/db/dbTokenService");
+const {
+  findArticleById,
+  getArticleContributors,
+} = require("../services/db/articleService");
+
 const {
   generateAccessToken,
+  verifyToken,
   generateRefreshToken,
-  generateVerificationToken,
-  verifyRefreshToken,
+  generateOtp,
+  hashToken,
 } = require("../services/security/tokenService");
-require("dotenv").config();
+const {
+  isSamePassword,
+  generateHashPassword,
+} = require("../services/security/encryptService");
 
-module.exports.register = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const {
-        user_name,
-        user_handle,
-        email,
-        isDoctor,
-        Profile_image,
-        password,
-        qualification,
-        specialization,
-        Years_of_experience,
-        contact_detail,
-        isContributor
-      } = req.body;
+const { sendOtpMail } = require("./emailservice");
+const { verifyUser } = require("../middleware/authMiddleware");
 
-      //console.log("running");
-      // Check for required fields
-      if (!user_name || !user_handle || !email || !password) {
-        return res
-          .status(400)
-          .json({ error: "Please provide all required fields" });
-      }
+const { throwError } = require("../utils/throwError");
+const { sendSuccess } = require("../utils/response");
+const { HTTP_STATUS, ERROR_CODES } = require("../constants/errorConstants");
 
-      // Check if user already exists in User or UnverifiedUser collections
+const { Types } = require("mongoose");
+const { ROLES } = require("../constants/roles");
 
-      const [existingUser, existingUserHandle, existingUnverifiedUser, existingUnverifiedUserHandle, existingAdmin] =
-        await Promise.all([
-          await User.findOne({ email }),
-          await User.findOne({ user_handle }),
-          await UnverifiedUser.findOne({ email }),
-          await UnverifiedUser.findOne({ user_handle }),
-          await adminModel.findOne({ email })
-        ])
-
-      if (existingUser || existingUnverifiedUser || existingAdmin) {
-        return res.status(400).json({ error: "Email already in use" });
-      }
-
-      if (existingUserHandle || existingUnverifiedUserHandle) {
-        return res.status(400).json({ error: "User Handle already in use" });
-      }
-
-      if (existingUnverifiedUser) {
-        return res.status(400).json({
-          error: "Please verify your email. Verification email already sent.",
-        });
-      }
-
-      // Hash the password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
-      // Generate a verification token
-      const verificationToken = generateVerificationToken({ email });
-      //  console.log("Verification token : ", verificationToken);
-
-      // Create new unverified user
-      const newUnverifiedUser = new UnverifiedUser({
-        user_name,
-        user_handle,
-        email,
-        password: hashedPassword,
-        isDoctor,
-        contact_detail,
-        Profile_image,
-        verificationToken,
-      });
-
-      // Include doctor-specific fields if the user is a doctor
-      if (isDoctor) {
-        newUnverifiedUser.qualification = qualification;
-        newUnverifiedUser.specialization = specialization;
-        newUnverifiedUser.Years_of_experience = Years_of_experience;
-      }
-
-      // Save the unverified user to the database
-      await newUnverifiedUser.save();
-
-      // Send verification email
-      if (isContributor) {
-        sendContributorVerificationEmail(email, password);
-      }
-      // sendVerificationEmail(email, verificationToken);
-
-      res.status(201).json({
-        message: "Registration successful. Please verify your email.",
-        token: verificationToken,
-      });
-    } catch (error) {
-      console.error("Error during registration:", error);
-
-      // Handle validation errors
-      if (error.name === "ValidationError") {
-        const validationErrors = Object.values(error.errors).map(
-          (val) => val.message
-        );
-        return res.status(400).json({ errors: validationErrors });
-      }
-
-      // Handle duplicate email/user handle error
-      if (error.code === 11000) {
-        return res
-          .status(409)
-          .json({ error: "Email or user handle already exists" });
-      }
-
-      // Handle general server errors
-      res.status(500).json({ error: "Internal server error" });
-    }
+async function creatingUnverifiedUser(userData) {
+  const verificationToken = await createUnverifiedUser({
+    user_name: userData.user_name,
+    user_handle: userData.user_handle,
+    email: userData.email,
+    password: userData.password,
+    isDoctor: userData.isDoctor,
+    qualification: userData.qualification,
+    specialization: userData.specialization,
+    Years_of_experience: userData.Years_of_experience,
+    Profile_image: userData.Profile_image,
+    contact_detail: userData.contact_detail,
+  });
+  console.log("verificationToken", verificationToken);
+  if (!verificationToken) {
+    throwError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      ERROR_CODES.INTERNAL_ERROR,
+      "Failed to register user",
+    );
   }
-)
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.PASSWORD,
-  },
-});
-
-function generateOTP() {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  // sending verification email to user
+  // await sendOtpMail(email, verificationToken);
 }
 
-module.exports.checkUserHandle = expressAsyncHandler(
+module.exports.register = expressAsyncHandler(async (req, res) => {
+  const start = Date.now();
+  const minDuration = 700;
 
-  async (req, res) => {
-    const userHandle = req.body.userHandle;
+  const userData = req.validateBody;
 
-    if (!userHandle) {
-      return res.status(400).json({ error: "User handle is required" });
-    }
+  // if user exist we get true or false value from checkExistingUser and checkExistingAdmin function and if any of them is true then we throw error that user already exist
+  const [existingUser, existingAdmin] = await Promise.all([
+    checkExistingUser({
+      email: userData.email,
+      user_handle: userData.user_handle,
+    }),
+    checkExistingAdmin({ email: userData.email }),
+  ]);
 
-    try {
-
-      const [user, unverifiedUser, admin] = await Promise.all([
-        User.findOne({ user_handle: userHandle }),
-        UnverifiedUser.findOne({ user_handle: userHandle }),
-        adminModel.findOne({ user_handle: userHandle })
-      ])
-
-
-      if (user || unverifiedUser || admin) {
-        return res.status(200).json({ status: true, message: "User handle already exists" });
-      }
-
-      return res.status(200).json({ status: false, message: 'User handle is available.' });
-
-    } catch (err) {
-      console.error("Error checking user handle:", err);
-      return res.status(500).json({ error: "Internal server error" });
-    }
+  if (!existingUser && !existingAdmin) {
+    await creatingUnverifiedUser(userData);
   }
-)
 
-module.exports.getprofile = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const user = await User.findOne({ _id: req.userId })
-        .populate({
-          path: "articles",
-          populate: { path: "tags" }, // Populate tags for articles
-        })
-        .populate({
-          path: "savedArticles",
-          populate: { path: "tags" }, // Populate tags for saved articles
-        })
-        .populate({
-          path: "repostArticles",
-          populate: { path: "tags" }, // Populate tags for saved articles
-        })
-        .exec();
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      if (!user.isVerified) {
-        return res
-          .status(403)
-          .json({ error: "Email not verified. Please check your email." });
-      }
-      res.json({ status: true, profile: user });
-    } catch (error) {
-      console.error("Error getting user profile:", error);
-      res.status(500).json({ error: error.message });
-    }
+  // simulate delay to prevent timing attacks
+  const elapsed = Date.now() - start;
+  if (elapsed < minDuration) {
+    await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed));
   }
-)
+  sendSuccess(
+    res,
+    HTTP_STATUS.CREATED,
+    "If the account can be registered, please verify your email.",
+  );
+});
 
-module.exports.getUserProfile = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const userId = req.query.id;
-      const userHandle = req.query.handle;
+module.exports.login = expressAsyncHandler(async (req, res) => {
+  const { email, password, fcmToken } = req.validateBody;
 
-      if (!userHandle && !userId) {
-        return res.status(400).json({ error: "User handle or id is required." });
-      }
+  const user = await findUserByEmail(email);
 
-      let user;
-
-      if (userId) {
-
-        user = await User.findById(userId)
-          .populate({
-            path: "articles",
-            match: { status: 'published' },
-            populate: { path: "tags" },
-          })
-          .populate({
-            path: "repostArticles",
-            populate: { path: "tags" },
-          })
-          .populate({
-            path: "improvements",
-            populate: { path: "tags" },
-          })
-          .exec();
-      }
-      else if (userHandle) {
-
-        user = await User.findOne({ user_handle: userHandle }).populate({
-          path: "articles",
-          match: { status: 'published' },
-          populate: { path: "tags" }, // Populate tags for articles
-        })
-          .populate({
-            path: "repostArticles",
-            populate: { path: "tags" }, // Populate tags for saved articles
-          })
-          .exec();
-      }
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (user.isBlockUser || user.isBannedUser) {
-        return res.status(403).json({ error: "User is blocked or banned" });
-      }
-      // Exclude sensitive information
-      const {
-        password,
-        refreshToken,
-        verificationToken,
-        otp,
-        otpExpires,
-        ...publicProfile
-      } = user._doc;
-
-      res.json({ status: true, profile: publicProfile });
-    } catch (error) {
-      console.log(error)
-      res.status(500).json({ error: error.message });
-    }
+  if (!user) {
+    throwError(
+      HTTP_STATUS.UNAUTHORIZED,
+      ERROR_CODES.ACCESS_DENIED,
+      "Invalid email or password",
+    );
   }
-)
 
-module.exports.getTokenStatus = expressAsyncHandler(
-
-  async (req, res) => {
-
-    const token = req.cookies.accessToken || req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
-      return res.status(200).json({ isValid: false, message: "Token is missing" });
-    }
-    try {
-
-      const decoded = verifyRefreshToken(token);
-      const now = Math.floor(Date.now() / 1000);
-      if (decoded.exp && decoded.exp < now) {
-        return res.status(200).json({
-          isValid: false,
-          message: "Token is expired",
-        });
-      }
-      const tokenData = await BlacklistedToken.findOne({ token });
-      if (tokenData) {
-        return res.status(200).json({ isValid: false, message: "Token is blacklisted" });
-      } else {
-        return res.status(200).json({ isValid: true, message: "Token is valid" });
-      }
-    } catch (err) {
-      return res.status(200).json({ isValid: false, message: "Token is invalid", error: err.message });
-    }
+  if (!user.isVerified) {
+    throwError(
+      HTTP_STATUS.FORBIDDEN,
+      ERROR_CODES.ACCESS_DENIED,
+      "Email not verified. Please verify your email first.",
+    );
   }
-)
+
+  if (user.isBannedUser || user.isBlockUser) {
+    throwError(
+      HTTP_STATUS.FORBIDDEN,
+      ERROR_CODES.ACCESS_DENIED,
+      "Account access restricted",
+    );
+  }
+
+  const isPasswordValid = await isSamePassword(password, user.password);
+
+  if (!isPasswordValid) {
+    throwError(
+      HTTP_STATUS.UNAUTHORIZED,
+      ERROR_CODES.ACCESS_DENIED,
+      "Invalid email or password",
+    );
+  }
+
+  if (user.refreshToken && user.refreshToken.hashedRefreshToken) {
+    console.log("Blacklisting existing refresh token for user:", user);
+    await logoutUser(user._id);
+  }
+
+  const { refreshToken, jti } = generateRefreshToken(
+    {
+      userId: user._id,
+      role: user.isDoctor ? "doctor" : "user",
+    },
+    "7d",
+  );
+
+  await loginUser(user._id, refreshToken, jti, fcmToken);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return sendSuccess(res, HTTP_STATUS.OK, "Login successful", {
+    user: {
+      _id: user._id,
+      email: user.email,
+      user_name: user.user_name,
+      isDoctor: user.isDoctor,
+      isVerified: user.isVerified,
+      user_handle: user.user_handle,
+    },
+    refreshToken,
+  });
+});
+
+module.exports.getprofile = expressAsyncHandler(async (req, res) => {
+  const user = await getMyProfile(req.user.userId);
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found",
+    );
+  }
+  sendSuccess(res, HTTP_STATUS.OK, "User profile fetched successfully.", {
+    user,
+  });
+});
+
+module.exports.getUserProfile = expressAsyncHandler(async (req, res) => {
+  const userId = req.validateQuery.id;
+  const userHandle = req.validateQuery.handle;
+
+  if (userId && !Types.ObjectId.isValid(userId)) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid user ID",
+    );
+  }
+
+  if (userHandle && userId) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Provide either user id or user handle, but not both",
+    );
+  }
+
+  const user = await getPublicProfile(userId, userHandle);
+
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found",
+    );
+  }
+
+  sendSuccess(res, HTTP_STATUS.OK, "User profile fetched successfully.", user);
+});
+
+module.exports.checkUserHandle = expressAsyncHandler(async (req, res) => {
+  const userHandle = req.body.userHandle;
+
+  if (!userHandle) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "User handle is required",
+    );
+  }
+
+  const [user, unverifiedUser, admin] = await Promise.all([
+    findUserByHandle(userHandle),
+    findUnverifiedUserByHandle(userHandle),
+    findAdminByHandle(userHandle),
+  ]);
+
+  if (user || unverifiedUser || admin) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.RESOURCE_ALREADY_EXISTS,
+      "User handle already exists",
+    );
+  }
+
+  sendSuccess(res, HTTP_STATUS.OK, "User handle is available.");
+});
 
 module.exports.sendOTPForForgotPassword = expressAsyncHandler(
   async (req, res) => {
-
-    try {
-
-      const { email } = req.body;
-
-      console.log("Email", req.body);
+      const { email } = req.validateBody;
 
       const [user, admin] = await Promise.all([
-
-        User.findOne({ email }),
-        adminModel.findOne({ email }),
+        findUserByEmail(email),
+        findAdminByEmail(email),
       ]);
 
+      const account = user || admin;
 
-      if (!user && !admin) {
-        return res
-          .status(400)
-          .json({ message: "User with this email does not exist." });
+      // Always return same message for enumeration protection
+      const successMessage =
+        "If an account exists, OTP has been sent to your email.";
+
+      if (!account) {
+        return sendSuccess(res, HTTP_STATUS.OK, successMessage);
+      }
+      if (account.isBlockUser || account.isBannedUser) {
+        return sendSuccess(res, HTTP_STATUS.OK, successMessage);
       }
 
-      const otp = generateOTP();
-      const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-      // Hash the OTP before storing
-      const salt = await bcrypt.genSalt(10);
-      const hashedOtp = await bcrypt.hash(otp, salt);
-
-      if (user) {
-        user.otp = hashedOtp;
-        user.otpExpires = otpExpires;
-        await user.save();
-      } else {
-
-        if (!admin.isVerified) {
-          return res.status(400).json({ message: "Admin is not verified." });
-        }
-        admin.otp = hashedOtp;
-        admin.otpExpires = otpExpires;
-        await admin.save();
+      if (admin && !admin.isVerified) {
+        return sendSuccess(res, HTTP_STATUS.OK, successMessage);
       }
 
-      const mailOptions = {
-        from: process.env.EMAIL,
-        to: email,
-        subject: "Password Reset OTP",
-        text: `Your OTP for password reset is: ${otp}`,
+      // Rate limit resend (example: 60 sec)
+      const cooldownMs = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS) * 1000;
+      if (
+        account.otpLastSentAt &&
+        Date.now() - new Date(account.otpLastSentAt).getTime() < cooldownMs
+      ) {
+        console.log(`OTP resend requested too soon for ${email}`);
+        return sendSuccess(res, HTTP_STATUS.OK, successMessage);
+      }
+
+      const otp = generateOtp(); // 6 digit
+      const hashedOtp = await hashToken(otp);
+      const otpExpires = new Date(
+        Date.now() + Number(process.env.OTP_EXPIRY_MINUTES) * 60 * 1000,
+      );
+
+      const updatePayload = {
+        otp: hashedOtp,
+        otpExpires,
+        otpLastSentAt: new Date(),
+        otpAttempts: 0,
       };
 
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error("Error sending email:", error);
-          return res
-            .status(500)
-            .json({ message: `Error sending email.`, error: `${error}` });
-        }
-        res.status(200).json({ message: "OTP sent to your email.", otp: otp });
-      });
-    } catch (err) {
+      if (process.env.NODE_ENV === "production") {
+        const result = await sendOtpMail(email, otp);
 
-      console.log(err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  }
+        if (!result) {
+          throwError(
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            ERROR_CODES.INTERNAL_ERROR,
+            "Failed to send OTP email",
+          );
+        }
+      }
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`OTP for ${email}: ${otp}`);
+      }
+
+      if (user) {
+        await updateUserOtp(user._id, updatePayload);
+      } else {
+        await updateAdminOtp(admin._id, updatePayload);
+      }
+      sendSuccess(res, HTTP_STATUS.OK, successMessage);
+  },
 );
 
 module.exports.verifyOtpForForgotPassword = expressAsyncHandler(
   async (req, res) => {
-    const { email, newPassword } = req.body;
+    const { email, otp, newPassword } = req.validateBody;
 
-    try {
+    const [user, admin] = await Promise.all([
+      findUserByEmail(email),
+      findAdminByEmail(email),
+    ]);
 
-      //  const [user] = await Promise.all([
-      //    User.findOne({ email }),
-      // adminModel.findOne({ email })
-      //  ]);
+    const account = user || admin;
 
-      const user = await User.findOne({ email });
-
-      if (!user) {
-        return res.status(400).json({ message: "User not found" });
-      }
-
-      //   if (user) {
-
-      const isPasswordSame = await bcrypt.compare(newPassword, user.password);
-      if (isPasswordSame) {
-        return res
-          .status(402)
-          .json({ message: "New password should not be same as old password." });
-      }
-
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(newPassword, salt);
-      user.password = hashedPassword;
-      user.otp = null;
-      user.otpExpires = null;
-      await user.save();
-      //  } else {
-
-      //}
-
-      res.status(200).json({ message: "Password reset successful." });
-    } catch (err) {
-
-      console.log(err);
-      res.status(500).json({ message: "Internal server error" });
+    if (!account) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "Invalid or expired OTP",
+      );
     }
-  }
-);
 
-module.exports.checkOtp = expressAsyncHandler(
-  async (req, res) => {
-    const { email, otp } = req.body;
+    if (account.isBlockUser || account.isBannedUser) {
+      throwError(
+        HTTP_STATUS.FORBIDDEN,
+        ERROR_CODES.ACCESS_DENIED,
+        "Account access restricted",
+      );
+    }
 
-    try {
+    if (!account.otp || !account.otpExpires) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "Invalid or expired OTP",
+      );
+    }
 
-      const [user, admin] = await Promise.all([
-        User.findOne({ email }),
-        adminModel.findOne({ email })
-      ])
+    const maxAttempts = Number(process.env.OTP_MAX_ATTEMPTS);
 
-      if (!user && !admin) {
-        return res.status(401).json({ message: "User not found" });
-      }
+    if (account.otpAttempts >= maxAttempts) {
       if (user) {
-        // Check if OTP is expired
-        if (user.otpExpires < Date.now()) {
-          return res.status(400).json({ message: "Invalid or expired OTP." });
-        }
-
-        // Verify hashed OTP
-        const isOtpValid = await bcrypt.compare(otp, user.otp);
-        if (!isOtpValid) {
-          return res.status(400).json({ message: "Invalid or expired OTP." });
-        }
+        await clearOtpUser(account._id);
       } else {
-        // Check if OTP is expired
-        if (!admin || admin.otpExpires < Date.now()) {
-          return res.status(400).json({ message: "Invalid or expired OTP." });
-        }
-
-        // Verify hashed OTP
-        const isOtpValid = await bcrypt.compare(otp, admin.otp);
-        if (!isOtpValid) {
-          return res.status(400).json({ message: "Invalid or expired OTP." });
-        }
+        await clearOtpAdmin(account._id);
       }
-
-
-      res.status(200).json({ message: "OTP is valid." });
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ message: "Internal server error" });
+      throwError(
+        HTTP_STATUS.TOO_MANY_REQUESTS,
+        ERROR_CODES.ACCESS_DENIED,
+        "Too many invalid OTP attempts. Request a new OTP.",
+      );
     }
-  }
-);
 
-module.exports.login = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const { email, password, fcmToken } = req.body;
+    const hashedOtp = await hashToken(otp);
 
-      if (!email || !password || !fcmToken) {
-        return res
-          .status(400)
-          .json({ error: "Please provide email and password and FCM Token" });
-      }
+    const isOtpInvalid =
+      account.otp !== hashedOtp || new Date(account.otpExpires) < new Date();
 
-      let user = await User.findOne({ email: email });
-   
-      if (!user) {
-        user = await UnverifiedUser.findOne({ email });
-        if (!user) return res.status(404).json({ error: "User not found" });
-        return res
-          .status(403)
-          .json({ error: "Email not verified. Please check your email." });
-      }
-
-      if (!user.isVerified) {
-        return res
-          .status(403)
-          .json({ error: "Email not verified. Please check your email." });
-      }
-   
-      if (user.isBannedUser || user.isBlockUser) {
-        return res.status(403).json({ error: "User is banned or blocked" });
-      }
-
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: "Invalid password" });
-      }
-
-      if (user.refreshToken != null) {
-        const blacklistedToken = new BlacklistedToken({ token: user.refreshToken });
-        await blacklistedToken.save();
-      }
-
-      // Generate Refresh Token
-      const refreshToken = generateRefreshToken({
-        userId: user._id,
-        email: user.email,
-        role: 'user'
-      });
-
-      // Store refresh token in the database
-      user.refreshToken = refreshToken;
-      user.fcmToken = fcmToken;
-      await user.save();
-
-      // Set cookies for tokens
-      //res.cookie("accessToken", accessToken, { httpOnly: true, maxAge: 900000 }); // 15 minutes
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        maxAge: 604800000,
-      }); // 7 days
-
-      res
-        .status(200)
-        .json({ user, refreshToken, message: "Login Successful" });
-    } catch (error) {
-      console.log("Login Error", error);
-
-      if (error.name === "ValidationError") {
-        return res.status(400).json({ error: error.message }); // Validation errors
-      } else {
-        return res.status(500).json({ error: "Internal server error" });
-      }
-    }
-  }
-);
-
-module.exports.logout = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      // Find the user and remove the refresh token
-      const user = await User.findById(req.userId);
-
+    if (isOtpInvalid) {
       if (user) {
-        // Get access token from request (used for authentication)
-        const accessToken = req.cookies.accessToken || req.headers['authorization']?.split(' ')[1];
-
-        // Blacklist both access and refresh tokens
-        const tokensToBlacklist = [];
-
-        if (accessToken) {
-          tokensToBlacklist.push({ token: accessToken });
-        }
-
-        if (user.refreshToken) {
-          tokensToBlacklist.push({ token: user.refreshToken });
-        }
-
-        // Bulk insert blacklisted tokens
-        if (tokensToBlacklist.length > 0) {
-          await BlacklistedToken.insertMany(tokensToBlacklist);
-        }
-
-        // Clear refresh token from user document
-        user.refreshToken = null;
-        await user.save();
+        await incrementOtpAttemptsUser(account._id);
+      } else {
+        await incrementOtpAttemptsAdmin(account._id);
       }
 
-      // Clear cookies
-      res.clearCookie("accessToken");
-      res.clearCookie("refreshToken");
-
-      res.status(200).json({ message: "Logout successful" });
-    } catch (error) {
-      console.error("Logout Error:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-);
-
-module.exports.refreshToken = expressAsyncHandler(
-  async (req, res) => {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(401).json({ error: "Refresh token required" });
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "Invalid or expired OTP",
+      );
     }
 
-    try {
-      // Verify the refresh token
-      const decoded = verifyRefreshToken(refreshToken);
+    const isPasswordSame = await isSamePassword(newPassword, account.password);
 
-      // Check if the refresh token is valid and associated with the user
-      const user = await User.findOne({ _id: decoded.userId, refreshToken });
-      if (!user) {
-        return res.status(403).json({ error: "Invalid refresh token" });
-      }
-
-      // Generate a new access token
-      const newAccessToken = generateAccessToken({
-        userId: user._id,
-        email: user.email,
-        role: 'user'
-      });
-
-      // Optionally, generate a new refresh token
-      const newRefreshToken = generateRefreshToken({
-        userId: user._id,
-        email: user.email,
-        role: 'user'
-      });
-
-      // Update the refresh token in the database
-      user.refreshToken = newRefreshToken;
-      await user.save();
-
-      res.cookie("accessToken", newAccessToken, {
-        httpOnly: true,
-        maxAge: 900000,
-      }); // 15 minutes
-      res.cookie("refreshToken", newRefreshToken, {
-        httpOnly: true,
-        maxAge: 604800000,
-      }); // 7 days
-
-      res
-        .status(200)
-        .json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
-    } catch (error) {
-      res.status(403).json({ error: "Invalid refresh token" });
+    if (isPasswordSame) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "New password must be different from old password",
+      );
     }
-  }
-);
-
-module.exports.deleteByUser = expressAsyncHandler(
-  async (req, res) => {
-    let token;
-    if (req.cookies && req.cookies["token"]) {
-      token = req.cookies["token"];
+    if (user) {
+      await updateUserPasswordAndClearOtp(account._id,newPassword);
     } else {
-      token = req.headers.authorization?.split(" ")[1];
+      await updateAdminPasswordAndClearOtp(account._id);
     }
 
-    if (!token) {
-      return res.status(401).json({ error: "Authorization token missing" });
-    }
-    try {
-      const { password } = req.body;
-      const email = await verifyUser(token);
-      const user = await User.findOne({ email });
-
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (!user.isVerified) {
-        return res
-          .status(403)
-          .json({ error: "Email not verified. Please check your email." });
-      }
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: "Invalid password" });
-      }
-      console.log("email : ", email + " password  : ", password);
-
-      // as of now hard delete
-      await Promise.all([
-        Article.deleteMany({ authorId: user._id }),
-        Podcast.deleteMany({ user_id: user._id }),
-        User.deleteOne({ _id: user._id }),
-      ]);
-
-      // await User.deleteOne({ email });
-      res.json({
-        status: true,
-        message: "account has been removed from database",
-      });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  }
+    sendSuccess(res, HTTP_STATUS.OK, "Password reset successful");
+  },
 );
 
-module.exports.deleteByAdmin = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const { adminEmail, adminPassword, userEmail } = req.body;
-      const admin = await adminModel.findOne({ email: adminEmail });
-      if (!admin) res.status(404).json({ message: "user not found" });
-      else {
-        console.log(admin);
-        const validAdimin = await bcrypt.compare(
-          adminPassword,
-          admin.adminPassword
-        );
-        if (!validAdimin) res.status(404).json({ message: "password not match" });
-        else {
-          const result = await User.deleteOne({ email: userEmail });
-          res.json({ messge: "user delerted sucessfully", result });
-        }
-      }
-    } catch (error) {
-      res.json({ messge: error.message });
+module.exports.logout = expressAsyncHandler(async (req, res) => {
+  const { userId, role } = req.user;
+  console.log("Logging out userId:", userId, "role:", role);
+  if (role === ROLES.DOCTOR || role === ROLES.USER) {
+    await logoutUser(userId);
+  }
+  if(role === ROLES.ADMIN){
+    await logoutAdmin(userId);
+  }
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+    res.clearCookie("accessToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  return sendSuccess(
+    res,
+    HTTP_STATUS.OK,
+    "Logged out successfully"
+  );
+});
+
+module.exports.refreshToken = expressAsyncHandler(async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Refresh token required",
+    );
+  }
+  // Verify the refresh token
+  const decoded = verifyToken(refreshToken);
+
+  const user = await findUserById(decoded.userId);
+  if (!user) {
+    throwError(
+      HTTP_STATUS.FORBIDDEN,
+      ERROR_CODES.ACCESS_DENIED,
+      "Invalid refresh token",
+    );
+  }
+
+  const newAccessToken = generateAccessToken(
+    { userId: user._id, email: user.email, role: "user" },
+    "15m",
+  );
+  const newRefreshToken = generateAccessToken(
+    { userId: user._id, email: user.email, role: "user" },
+    "7d",
+  );
+
+  user.refreshToken = newRefreshToken;
+  await user.save();
+
+  res.cookie("accessToken", newAccessToken, {
+    httpOnly: true,
+    maxAge: 900000,
+  }); // 15 minutes
+  res.cookie("refreshToken", newRefreshToken, {
+    httpOnly: true,
+    maxAge: 604800000,
+  }); // 7 days
+
+  sendSuccess(res, HTTP_STATUS.OK, "Refresh token generated successfully", {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  });
+});
+
+module.exports.deleteByUser = expressAsyncHandler(async (req, res) => {
+  const { password } = req.validateBody;
+  const { userId, role } = req.user;
+
+  const user = await findUserById(userId);
+
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found"
+    );
+  }
+
+  const isPasswordValid = await isSamePassword(
+    password,
+    user.password
+  );
+
+  if (!isPasswordValid) {
+    throwError(
+      HTTP_STATUS.UNAUTHORIZED,
+      ERROR_CODES.ACCESS_DENIED,
+      "Invalid password"
+    );
+  }
+
+  await deleteUserById(userId);
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  return sendSuccess(
+    res,
+    HTTP_STATUS.OK,
+    "Account deleted successfully"
+  );
+});
+
+module.exports.deleteByAdmin = expressAsyncHandler(async (req, res) => {
+  const { adminEmail, adminPassword, userEmail } = req.body;
+  const admin = await findAdminByEmail(adminEmail);
+  if (!admin) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "Admin not found",
+    );
+  } else {
+    // console.log(admin);
+    const validAdimin = await isSamePassword(
+      adminPassword,
+      admin.adminPassword,
+    );
+    if (!validAdimin) {
+      throwError(
+        HTTP_STATUS.UNAUTHORIZED,
+        ERROR_CODES.ACCESS_DENIED,
+        "Invalid password",
+      );
+    } else {
+      const result = await deleteUserByEmail(userEmail);
+      sendSuccess(res, HTTP_STATUS.OK, "User deleted successfully", result);
     }
   }
-);
+});
+
 // follow a user
-module.exports.follow = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const { articleId, followUserId } = req.body;
+module.exports.follow = expressAsyncHandler(async (req, res) => {
+  const { articleId, followUserId } = req.validateBody;
+  const currentUserId = req.user.userId;
 
-      // Check if user is trying to follow themselves
-      if (!articleId && !followUserId) {
-        return res.status(400).json({ error: "Article id or follow user id are required" });
-      }
+  const user = await findUserById(currentUserId);
 
-      let article;
-      if (articleId) {
-        article = await Article.findById(Number(articleId));
-        if (!article || article.is_removed) {
-          return res.status(404).json({ error: "Article not found" });
-        }
-      }
-
-
-      if (article && req.userId === article.authorId) {
-        return res
-          .status(400)
-          .json({ message: "You cannot follow or unfollow yourself" });
-      }
-
-      // Find the user who is following
-      const user = await User.findById(req.userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-
-      // Find the user to be followed
-
-      let userToFollow;
-
-      if (article) {
-        userToFollow = await User.findById(article.authorId);
-      }
-      else {
-        userToFollow = await User.findById(followUserId);
-      }
-
-      if (!userToFollow)
-        return res.status(404).json({ message: "User to follow not found" });
-
-      if (userToFollow.isBlockUser || userToFollow.isBannedUser) {
-        return res.status(400).json({ message: "User to follow is blocked or banned" });
-      }
-
-      if (user.isBlockUser || user.isBannedUser) {
-        return res.status(400).json({ message: "You are blocked or banned" });
-      }
-
-      // Filter out null values and convert to strings
-      const followerUserset = new Set(
-        userToFollow.followers.filter((id) => id).map((id) => id.toString())
-      );
-      const followingUserSet = new Set(
-        user.followings.filter((id) => id).map((id) => id.toString())
-      );
-
-      //console.log("USER ID", req.userId.toString());
-      // console.log("AUTHOR ID", article.authorId.toString());
-      // console.log("Follower User Set", followerUserset);
-      // console.log("Following User Set", followingUserSet);
-      // console.log("Condition 1 ", followerUserset.has(req.userId.toString()));
-      // console.log("Condition 2 ", followingUserSet.has(article.authorId.toString()));
-      if (
-        followerUserset.has(req.userId.toString()) ||
-        followingUserSet.has(userToFollow._id.toString())
-      ) {
-        // Unfollow
-        user.followings = user.followings.filter(
-          (id) => id.toString() !== userToFollow._id.toString()
-        );
-        user.followingCount = Math.max(0, user.followingCount - 1);
-        await user.save();
-
-        userToFollow.followers = userToFollow.followers.filter(
-          (id) => id && id.toString() !== req.userId.toString()
-        );
-        userToFollow.followerCount = Math.max(0, userToFollow.followerCount - 1);
-        await userToFollow.save();
-        res.json({ message: "Unfollow successfully", followStatus: false });
-      } else {
-        // Follow
-        user.followings.push(userToFollow._id);
-        user.followingCount += 1;
-        await user.save();
-
-        userToFollow.followers.push(req.userId);
-        userToFollow.followerCount += 1;
-        await userToFollow.save();
-        res.json({ message: "Follow successfully", followStatus: true });
-      }
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found",
+    );
   }
-);
+
+  if (user.isBlockUser || user.isBannedUser) {
+    throwError(
+      HTTP_STATUS.FORBIDDEN,
+      ERROR_CODES.ACCESS_DENIED,
+      "You are blocked or banned",
+    );
+  }
+
+  let targetUserId;
+
+  if (articleId) {
+    const article = await findArticleById(articleId);
+
+    if (!article || article.is_removed) {
+      throwError(
+        HTTP_STATUS.NOT_FOUND,
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "Article not found",
+      );
+    }
+
+    targetUserId = article.authorId;
+  } else {
+    targetUserId = followUserId;
+  }
+
+  if (currentUserId === targetUserId) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "You cannot follow or unfollow yourself",
+    );
+  }
+
+  const userToFollow = await findUserById(targetUserId);
+
+  if (!userToFollow) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User to follow not found",
+    );
+  }
+
+  if (userToFollow.isBlockUser || userToFollow.isBannedUser) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "User to follow is blocked or banned",
+    );
+  }
+
+  const isAlreadyFollowing = user.followings
+    ?.map((id) => Number(id))
+    .includes(Number(userToFollow._id));
+
+  if (isAlreadyFollowing) {
+    await unfollowUser(user._id, userToFollow._id);
+
+    return sendSuccess(res, HTTP_STATUS.OK, "Unfollow successfully", {
+      followStatus: false,
+    });
+  }
+
+  await followUser(user._id, userToFollow._id);
+
+  return sendSuccess(res, HTTP_STATUS.OK, "Follow successfully", {
+    followStatus: true,
+  });
+});
 // Get Follower
-module.exports.getFollowers = expressAsyncHandler(
-  async (req, res) => {
-    const userId = req.userId;
-    const author = await User.findById(userId).
-      populate({
-        path: "followers",
-        select: "user_id user_name followers Profile_image",
-        match: {
-          isBannedUser: false,
-          isBlockUser: false
-        }
-      }).exec();
+module.exports.getFollowers = expressAsyncHandler(async (req, res) => {
+  const userId = req.userId;
+  const author = await getUserSocialData(userId);
 
-    if (!author) {
-      return res.status(404).json({ error: "Author not found" });
-    }
-
-    if (author.followers) {
-      author.followers = author.followers.filter(user => user !== null);
-    }
-    return res.status(200).json({ followers: author.followers });
+  if (!author) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "Author not found",
+    );
   }
-);
+  if (author.followers) {
+    author.followers = author.followers.filter((user) => user !== null);
+  }
+  sendSuccess(
+    res,
+    HTTP_STATUS.OK,
+    "Followers fetched successfully",
+    author.followers,
+  );
+});
 // GET followings
-module.exports.getFollowings = expressAsyncHandler(
-  async (req, res) => {
-    const userId = req.userId;
-    const author = await User.findById(userId).
-      populate({
-        path: "followings",
-        select: "user_id user_name followers Profile_image",
-        match: {
-          isBannedUser: false,
-          isBlockUser: false
-        }
-      }).exec();
+module.exports.getFollowings = expressAsyncHandler(async (req, res) => {
+  const userId = req.userId;
+  const author = await getUserSocialData(userId);
 
-    if (!author) {
-      return res.status(404).json({ error: "Author not found" });
-    }
-    if (author.followings) {
-      author.followings = author.followings.filter(user => user !== null);
-    }
-    return res.status(200).json({ followers: author.followings });
+  if (!author) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "Author not found",
+    );
   }
-);
+  if (author.followings) {
+    author.followings = author.followings.filter((user) => user !== null);
+  }
+  sendSuccess(
+    res,
+    HTTP_STATUS.OK,
+    "Followings fetched successfully",
+    author.followings,
+  );
+});
 
 // GET socials
 // type : 1 for followers, 2 for followings, 3 for contributors
-module.exports.getSocials = expressAsyncHandler(
-  async (req, res) => {
+module.exports.getSocials = expressAsyncHandler(async (req, res) => {
+  const { type, articleId, social_user_id } = req.query;
 
-    const { type, articleId, social_user_id } = req.query;
+  if (articleId) {
+    const article = await getArticleContributors(Number(articleId));
 
-    if (articleId) {
-      const article = await
-        Article.findById(Number(articleId))
-          .populate({
-            path: "contributors",
-            select: "user_id user_name followers Profile_image",
-            match: {
-              isBannedUser: false,
-              isBlockUser: false
-            }
-          }).
-          exec();
-
-      if (!article || article.is_removed) {
-        return res.status(404).json({ error: "Article not found" });
-      }
-
-      if (article.contributors) {
-        article.contributors = article.contributors.filter(user => user !== null);
-      }
-
-      return res.status(200).json({ followers: article.contributors });
-    }
-    let id = social_user_id ? social_user_id : req.userId;
-
-    const author = await User.findById(id)
-      .populate({
-        path: "followings",
-        select: "user_id user_name followers Profile_image",
-        match: {
-          isBannedUser: false,
-          isBlockUser: false
-        }
-      })
-      .populate({
-        path: "followers",
-        select: "user_id user_name followers Profile_image",
-        match: {
-          isBannedUser: false,
-          isBlockUser: false
-        }
-      })
-      .exec();
-
-
-    if (!author) {
-      return res.status(404).json({ error: "Author not found" });
+    if (!article) {
+      throwError(
+        HTTP_STATUS.NOT_FOUND,
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "Article not found",
+      );
     }
 
-    if (Number(type) === 1) {
-      if (author.followers) {
-        author.followers = author.followers.filter(user => user !== null);
-      }
-      return res.status(200).json({ followers: author.followers });
-    }
+    sendSuccess(
+      res,
+      HTTP_STATUS.OK,
+      "Article contributors fetched successfully",
+      article,
+    );
+  }
+  let id = social_user_id ? social_user_id : req.userId;
 
-    else if (Number(type) === 2) {
-      if (author.followings) {
-        author.followings = author.followings.filter(user => user !== null);
-      }
-      return res.status(200).json({ followers: author.followings });
-    }
-
-    else {
-      return res.status(404).json({ error: "Invalid type" });
-    }
-
+  const author = getUserSocialData(id);
+  if (!author) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "Author not found",
+    );
   }
 
-);
-module.exports.getProfileImage = expressAsyncHandler(
-  async (req, res) => {
-    const userId = req.params.userId;
-    const author = await User.findById(userId);
-
-    if (!author) {
-      return res.status(404).json({ error: 'Author not found' });
+  if (Number(type) === 1) {
+    if (author.followers) {
+      author.followers = author.followers.filter((user) => user !== null);
     }
-
-    return res.status(200).json({ profile_image: author.Profile_image });
-
+    sendSuccess(
+      res,
+      HTTP_STATUS.OK,
+      "Followers fetched successfully",
+      author.followers,
+    );
+  } else if (Number(type) === 2) {
+    if (author.followings) {
+      author.followings = author.followings.filter((user) => user !== null);
+    }
+    sendSuccess(
+      res,
+      HTTP_STATUS.OK,
+      "Followings fetched successfully",
+      author.followings,
+    );
+  } else {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid type",
+    );
   }
-);
+});
+
+module.exports.getProfileImage = expressAsyncHandler(async (req, res) => {
+  const userId = req.validateParams.userId;
+  if (!Types.ObjectId.isValid(userId)) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid user id",
+    );
+  }
+  const user = await findUserById(userId);
+
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found",
+    );
+  }
+
+  sendSuccess(res, HTTP_STATUS.OK, "Profile image fetched successfully", {
+    profileImage: user.Profile_image,
+  });
+});
 
 // get User Articles,
-module.exports.getUserWithArticles = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const user = await User.findById(req.userId).populate("articles").exec(); // Populate  articles
+module.exports.getUserWithArticles = expressAsyncHandler(async (req, res) => {
+  const user = await getUserArticles(req.userId); // Populate  articles
 
-      if (!user) {
-        return res.status(400).json({ message: "user not found" });
-      }
-      if (user.isBannedUser || user.isBlockUser) {
-        return res.status(400).json({ message: "User is banned or blocked" });
-      }
-      return res.status(200).json({ message: "Articles", data: user });
-    } catch (error) {
-      console.log("Get User Articles Error", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found",
+    );
   }
-);
+  sendSuccess(res, HTTP_STATUS.OK, "Articles fetched successfully", user);
+});
 
 // get user like and save articles
 module.exports.getUserLikeAndSaveArticles = expressAsyncHandler(
   async (req, res) => {
-    try {
-      const user = await User.findById(req.userId)
-        .populate({
-          path: "likedArticles",
-          populate: {
-            path: "authorId",
-            match: {
-              isBlockUser: false,
-              isBannedUser: false
-            }
-          }
-        }) // Populate liked articles
-        .populate({
-          path: "savedArticles",
-          populate: {
-            path: "authorId",
-            match: {
-              isBlockUser: false,
-              isBannedUser: false
-            }
-          }
-        }); // Populate saved articles
-
-      if (!user) {
-        return res.status(400).json({ message: "user not found" });
-      }
-
-      if (user.likedArticles) {
-        user.likedArticles = user.likedArticles.filter(article => article && article.authorId !== null);
-      }
-
-      if (user.savedArticles) {
-        user.savedArticles = user.savedArticles.filter(article => article && article.authorId !== null);
-      }
-
-      return res
-        .status(200)
-        .json({ message: "Like and Save Articles", data: user });
-    } catch (error) {
-      console.log("Get User Articles Error", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  }
-);
-
-//update read article
-/*
-module.exports.updateReadArticles = async (req, res) => {
-  try {
-    const { userId, articleId } = req.body;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    user.readArticles.push({
-      articleId: Number(articleId),
-      readingDate: new Date(),
-    });
-    await user.save();
-
-    res.status(200).json({ message: "Article read recorded successfully" });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Error updating read articles", details: error.message });
-  }
-};
-*/
-
-
-/*
-//This endpoint returns the number of articles read by the user daily for a given month.
-module.exports.collectMonthlyRecordsForReading = async (req, res) => {
-  try {
-    const { userId, month } = req.query;
-    const user = await User.findById(userId);
+    const user = await getUserLikeAndSaveArticleData(req.userId);
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      throwError(
+        HTTP_STATUS.NOT_FOUND,
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "User not found",
+      );
     }
 
-    const startOfMonth = moment(month, "MM-YYYY").startOf("month");
-    const endOfMonth = moment(month, "MM-YYYY").endOf("month");
+    if (user.likedArticles) {
+      user.likedArticles = user.likedArticles.filter(
+        (article) => article && article.authorId !== null,
+      );
+    }
 
-    const records = user.readArticles.filter((record) =>
-      moment(record.readingDate).isBetween(startOfMonth, endOfMonth)
+    if (user.savedArticles) {
+      user.savedArticles = user.savedArticles.filter(
+        (article) => article && article.authorId !== null,
+      );
+    }
+
+    sendSuccess(
+      res,
+      HTTP_STATUS.OK,
+      "Like and Save Articles fetched successfully",
+      user,
     );
-
-    const dailyRecords = {};
-    records.forEach((record) => {
-      const date = moment(record.readingDate).format("DD-MM-YY");
-      if (dailyRecords[date]) {
-        dailyRecords[date]++;
-      } else {
-        dailyRecords[date] = 1;
-      }
-    });
-
-    res.status(200).json({
-      status: true,
-      data: Object.keys(dailyRecords).map((date) => ({
-        articleReadCount: dailyRecords[date],
-        date,
-      })),
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: "Error fetching reading records",
-      details: error.message,
-    });
-  }
-};
-
-//This endpoint returns the list of articles written by the user in a given month.
-
-module.exports.collectMonthlyRecordsForWriting = async (req, res) => {
-  try {
-    const { userId, month } = req.query;
-
-    const startOfMonth = moment(month, "MM-YYYY").startOf("month");
-    const endOfMonth = moment(month, "MM-YYYY").endOf("month");
-
-    const articles = await Article.find({
-      authorId: userId,
-      published_date: { $gte: startOfMonth, $lt: endOfMonth },
-    })
-      .populate("tags") // This populates the tag data
-      .exec();
-
-    const dailyRecords = {};
-    articles.forEach((article) => {
-      const date = moment(article.published_date).format("DD-MM-YY");
-      if (dailyRecords[date]) {
-        dailyRecords[date]++;
-      } else {
-        dailyRecords[date] = 1;
-      }
-    });
-
-    res.status(200).json({
-      status: true,
-      data: Object.keys(dailyRecords).map((date) => ({
-        articlePostCount: dailyRecords[date],
-        date,
-      })),
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: "Error fetching writing records",
-      details: error.message,
-    });
-  }
-};
-*/
-module.exports.updateProfileImage = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const { profileImageUrl } = req.body;
-
-      if (!profileImageUrl) {
-        res
-          .status(400)
-          .json({ error: "User ID and profile image URL are required." });
-        return;
-      }
-
-      //console.log(req.userId);
-      // Find the user in the User collection
-      let user = await User.findById(req.userId);
-
-      if (!user) {
-        return res.status(404).json({ error: "User not found." });
-      }
-
-      if (user.isBannedUser || user.isBlockUser) {
-        return res.status(403).json({ error: "User is banned or blocked." });
-      }
-
-      // Update the profile image URL
-      user.Profile_image = profileImageUrl;
-      // Save the updated user document
-      await user.save();
-
-      res.status(200).json({
-        message: "Profile image updated successfully.",
-        Profile_image: profileImageUrl,
-      });
-    } catch (error) {
-      console.error("Error updating profile image:", error);
-      // Handle general server errors
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
+  },
 );
+
+module.exports.updateProfileImage = expressAsyncHandler(async (req, res) => {
+  const { profileImageUrl } = req.body;
+
+  if (!profileImageUrl) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Profile image URL is required",
+    );
+  }
+
+  let user = await findUserById(req.userId);
+
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found",
+    );
+  }
+
+  if (user.isBannedUser || user.isBlockUser) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "User is banned or blocked",
+    );
+  }
+
+  // Update the profile image URL
+  user.Profile_image = profileImageUrl;
+  await user.save();
+
+  sendSuccess(
+    res,
+    HTTP_STATUS.OK,
+    "Profile image updated successfully",
+    profileImageUrl,
+  );
+});
 
 // get user details
-module.exports.getUserDetails = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      const user = await User.findById(req.userId);
+module.exports.getUserDetails = expressAsyncHandler(async (req, res) => {
+  const user = await getPublicProfile(req.userId);
 
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (user.isBannedUser || user.isBlockUser) {
-        return res.status(403).json({ error: "User is banned or blocked" });
-      }
-      // Exclude sensitive information
-      const {
-        password,
-        refreshToken,
-        verificationToken,
-        otp,
-        otpExpires,
-        followingCount,
-        followerCount,
-        followers,
-        followings,
-        articles,
-        last_updated_at,
-        likedArticles,
-        readArticles,
-        savedArticles,
-        repostArticles,
-        improvements,
-        created_at,
-        ...publicProfile
-      } = user._doc;
-
-      res.json({ status: true, profile: publicProfile });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found",
+    );
   }
-);
+
+  if (user.isBannedUser || user.isBlockUser) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "User is banned or blocked",
+    );
+  }
+
+  sendSuccess(res, HTTP_STATUS.OK, "User details fetched successfully", user);
+});
 
 // update user general details
 module.exports.updateUserGeneralDetails = expressAsyncHandler(
   async (req, res) => {
-    try {
-      const userId = req?.userId;
-      const { username, userHandle, email, about } = req.body;
-
-      // Validate input fields
-      if (!username || !userHandle || !email || !about) {
-        return res
-          .status(400)
-          .json({ error: "Please provide all required fields" });
-      }
-
-
-      // Find the user by ID
-      const user = await User.findById(req.userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Check if the email is already in use by another user (excluding the current user)
-      const emailExists = await User.findOne({
-        contact_detail: { email: email },
-        email: email,
-        _id: { $ne: userId },
-      });
-      if (emailExists) {
-        return res.status(400).json({ error: "Email already in use" });
-      }
-
-      // Check if the user handle is already in use by another user (excluding the current user)
-      const userHandleExists = await User.findOne({
-        user_handle: userHandle,
-        _id: { $ne: userId },
-      });
-      if (userHandleExists) {
-        return res.status(400).json({ error: "User handle already in use" });
-      }
-
-      if (user.isBannedUser || user.isBlockUser) {
-        return res.status(403).json({ error: "User is banned or blocked." });
-      }
-      // Update user details
-      user.user_name = username;
-      user.user_handle = userHandle;
-      user.email = email;
-      user.about = about;
-      await user.save();
-
-      // Respond with success
-      res.json({ status: true, message: "User details updated successfully" });
-    } catch (error) {
-      console.error("Error during updating user details:", error);
-
-      // Handle duplicate email/user handle error
-      if (error.code === 11000) {
-        return res
-          .status(409)
-          .json({ error: "Email or user handle already exists" });
-      }
-
-      // Handle Mongoose validation errors
-      if (error instanceof mongoose.Error.ValidationError) {
-        const validationErrors = Object.values(error.errors).map(
-          (val) => val.message
-        );
-        return res.status(400).json({ errors: validationErrors });
-      }
-
-      // Handle general server errors
-      res.status(500).json({ error: "Internal server error" });
+    const userId = req?.userId;
+    const { username, userHandle, email, about } = req.body;
+    // Validate input fields
+    if (!username || !userHandle || !email || !about) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "Please provide all required fields",
+      );
     }
-  }
 
+    const emailExists = await checkEmailExists(email, userId);
+    if (emailExists) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "Email already in use",
+      );
+    }
+
+    const userHandleExists = await checkUserHandleExists(userHandle, userId);
+
+    if (userHandleExists) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "User handle already in use",
+      );
+    }
+
+    // Find the user by ID
+    const user = await findUserById(req.userId);
+    if (!user) {
+      throwError(
+        HTTP_STATUS.NOT_FOUND,
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "User not found",
+      );
+    }
+    if (user.isBannedUser || user.isBlockUser) {
+      throwError(
+        HTTP_STATUS.FORBIDDEN,
+        ERROR_CODES.ACCESS_DENIED,
+        "User is banned or blocked",
+      );
+    }
+    // Update user details
+    user.user_name = username;
+    user.user_handle = userHandle;
+    user.email = email;
+    user.about = about;
+    await user.save();
+
+    sendSuccess(res, HTTP_STATUS.OK, "User details updated successfully", user);
+  },
 );
 // update user contact details
 module.exports.updateUserContactDetails = expressAsyncHandler(
   async (req, res) => {
-    try {
-      const userId = req?.userId;
-      const { phone, email } = req.body;
+    const { phone, email } = req.body;
 
-      // Validate input fields
-      if (!email || !phone) {
-        return res
-          .status(400)
-          .json({ error: "Please provide all required fields" });
-      }
-
-      // Find the user by ID
-      const user = await User.findById(req.userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Check if the email is already in use by another user (excluding the current user) contact_detail: {email_id:email},
-      const emailExists = await User.findOne({
-        email: email,
-        _id: { $ne: req.userId },
-      });
-      if (emailExists) {
-        return res.status(400).json({ error: "Email already in use" });
-      }
-      const contactEmailExists = await User.findOne({
-        "contact_detail.email_id": email,
-        _id: { $ne: req.userId },
-      });
-
-      if (contactEmailExists) {
-        return res.status(400).json({ error: "Email already in use" });
-      }
-
-      console.log(contactEmailExists);
-      const phoneNumerExists = await User.findOne({
-        "contact_detail.phone_no": phone,
-        _id: { $ne: userId },
-      });
-      if (phoneNumerExists) {
-        return res.status(400).json({ error: "Phone Numer already in use" });
-      }
-
-      if (user.isBannedUser || user.isBlockUser) {
-        return res.status(403).json({ error: "User is banned or blocked." });
-      }
-
-      // Update user details
-      user.contact_detail.email_id = email;
-      user.contact_detail.phone_no = phone;
-      await user.save();
-
-      // Respond with success
-      res.json({ status: true, message: "User contact updated successfully" });
-    } catch (error) {
-      console.error("Error during updating user details:", error);
-
-      // Handle duplicate email/user handle error
-      if (error.code === 11000) {
-        return res
-          .status(409)
-          .json({ error: "Email or user handle already exists" });
-      }
-
-      // Handle Mongoose validation errors
-      if (error instanceof mongoose.Error.ValidationError) {
-        const validationErrors = Object.values(error.errors).map(
-          (val) => val.message
-        );
-        return res.status(400).json({ errors: validationErrors });
-      }
-
-      // Handle general server errors
-      res.status(500).json({ error: "Internal server error" });
+    // Validate input fields
+    if (!email || !phone) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "Please provide all required fields",
+      );
     }
-  }
+
+    const emailExists = await checkEmailExists(email, req.userId);
+
+    if (emailExists) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "Email already in use",
+      );
+    }
+
+    // Find the user by ID
+    const user = await findUserById(req.userId);
+    if (!user) {
+      throwError(
+        HTTP_STATUS.NOT_FOUND,
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "User not found",
+      );
+    }
+
+    if (user.isBannedUser || user.isBlockUser) {
+      throwError(
+        HTTP_STATUS.FORBIDDEN,
+        ERROR_CODES.ACCESS_DENIED,
+        "User is banned or blocked",
+      );
+    }
+    // Update user details
+    user.contact_detail.email_id = email;
+    user.contact_detail.phone_no = phone;
+    await user.save();
+    // Respond with success
+    sendSuccess(res, HTTP_STATUS.OK, "User contact updated successfully", user);
+  },
 );
 
 // update user Professional details
 module.exports.updateUserProfessionalDetails = expressAsyncHandler(
   async (req, res) => {
-    try {
-      const userId = req.userId;
+    const { specialization, qualification, experience } = req.body;
 
-      const { specialization, qualification, experience } = req.body;
-
-      // Validate input fields
-      if (!specialization || !qualification || !experience) {
-        return res
-          .status(400)
-          .json({ error: "Please provide all required fields" });
-      }
-
-      // Find the user by ID
-      const user = await User.findById(req.userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (user.isBannedUser || user.isBlockUser) {
-        return res.status(403).json({ error: "User is banned or blocked." });
-      }
-      // Update user details
-      user.specialization = specialization;
-      user.qualification = qualification;
-      user.Years_of_experience = experience;
-      await user.save();
-
-      // Respond with success
-      res.json({ status: true, message: "User details updated successfully" });
-    } catch (error) {
-      console.error("Error during updating user details:", error);
-      // Handle general server errors
-      res.status(500).json({ error: "Internal server error" });
+    // Validate input fields
+    if (!specialization || !qualification || !experience) {
+      throwError(
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        "Please provide all required fields",
+      );
     }
-  }
+
+    // Find the user by ID
+    const user = await findUserById(req.userId);
+    if (!user) {
+      throwError(
+        HTTP_STATUS.NOT_FOUND,
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "User not found",
+      );
+    }
+
+    if (user.isBannedUser || user.isBlockUser) {
+      throwError(
+        HTTP_STATUS.FORBIDDEN,
+        ERROR_CODES.ACCESS_DENIED,
+        "User is banned or blocked",
+      );
+    }
+    // Update user details
+    user.specialization = specialization;
+    user.qualification = qualification;
+    user.Years_of_experience = experience;
+    await user.save();
+
+    // Respond with success
+    sendSuccess(res, HTTP_STATUS.OK, "User details updated successfully", user);
+  },
 );
 
 // update user password
-module.exports.updateUserPassword = expressAsyncHandler(
-  async (req, res) => {
-    try {
-      //  const userId = req?.userId;
-      const { old_password, new_password, userId } = req.body;
+module.exports.updateUserPassword = expressAsyncHandler(async (req, res) => {
+  const { old_password, new_password, userId } = req.body;
 
-      // Check if both old and new passwords are provided
-      if (!old_password || !new_password || !userId) {
-        return res.status(400).json({ error: "Missing passwords and user id" });
-      }
-
-      // Check if the new password is long enough
-      if (new_password.length < 6) {
-        return res.status(400).json({ error: "Password too short" });
-      }
-
-      // Find the user by ID
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (user.isBannedUser || user.isBlockUser) {
-        return res.status(403).json({ error: "User is banned or blocked." });
-      }
-
-      // Check if the old password matches the stored password
-      const isOldPasswordValid = await bcrypt.compare(
-        old_password,
-        user.password
-      );
-      if (!isOldPasswordValid) {
-        return res.status(401).json({ error: "Invalid old password" });
-      }
-
-      // Ensure the new password is not the same as the old password
-      const isSameAsOldPassword = await bcrypt.compare(
-        new_password,
-        user.password
-      );
-      if (isSameAsOldPassword) {
-        return res.status(400).json({ error: "Same as old password" });
-      }
-
-      // Hash the new password
-      const salt = await bcrypt.genSalt(10);
-      const newHashedPassword = await bcrypt.hash(new_password, salt);
-
-      // Update the user's password
-      user.password = newHashedPassword;
-      await user.save();
-      res.json({ status: true, message: "Password updated" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Server error" });
-    }
+  // Check if both old and new passwords are provided
+  if (!old_password || !new_password || !userId) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Please provide all required fields",
+    );
   }
-);
 
+  // Check if the new password is long enough
+  if (new_password.length < 6) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Password too short",
+    );
+  }
 
+  // Find the user by ID
+  const user = await findUserById(userId);
+  if (!user) {
+    throwError(
+      HTTP_STATUS.NOT_FOUND,
+      ERROR_CODES.RESOURCE_NOT_FOUND,
+      "User not found",
+    );
+  }
+
+  if (user.isBannedUser || user.isBlockUser) {
+    throwError(
+      HTTP_STATUS.FORBIDDEN,
+      ERROR_CODES.ACCESS_DENIED,
+      "User is banned or blocked",
+    );
+  }
+
+  // Check if the old password matches the stored password
+  const isOldPasswordValid = await isSamePassword(old_password, user.password);
+  if (!isOldPasswordValid) {
+    throwError(
+      HTTP_STATUS.UNAUTHORIZED,
+      ERROR_CODES.INVALID_CREDENTIALS,
+      "Invalid old password",
+    );
+  }
+
+  // Ensure the new password is not the same as the old password
+  const isSameAsOldPassword = await isSamePassword(new_password, user.password);
+  if (isSameAsOldPassword) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Same as old password",
+    );
+  }
+
+  const newHashedPassword = await generateHashPassword(new_password);
+
+  // Update the user's password
+  user.password = newHashedPassword;
+  await user.save();
+
+  sendSuccess(res, HTTP_STATUS.OK, "Password updated successfully", user);
+});

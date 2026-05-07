@@ -19,6 +19,7 @@ const unverifiedUserSchema = new mongoose.Schema({
             message: '{VALUE} is not a valid email',
             isAsync: false,
         },
+        index: true,
     },
     password: {
         type: String,
@@ -55,9 +56,15 @@ const unverifiedUserSchema = new mongoose.Schema({
         type: String,
         default: "",
     },
-    verificationToken: {
+    hashedJti: {
         type: String,
         required: true,
+        index: true,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+        expires: 3600, // 1 hour
     },
 });
 

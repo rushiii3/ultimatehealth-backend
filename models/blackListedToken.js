@@ -1,11 +1,30 @@
-// models/blacklistedToken.js
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const blacklistedTokenSchema = new mongoose.Schema({
-  token: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now, expires: '7d' }
-});
+const blacklistedTokenSchema = new mongoose.Schema(
+  {
+    jti: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      trim: true,
+    },
 
-const BlacklistedToken = mongoose.model('BlacklistedToken', blacklistedTokenSchema);
+    expiresAt: {
+      type: Date,
+      required: true,
+      index: { expires: 0 },
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  }
+);
+
+const BlacklistedToken = mongoose.model(
+  "BlacklistedToken",
+  blacklistedTokenSchema
+);
 
 module.exports = BlacklistedToken;

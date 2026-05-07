@@ -1,22 +1,30 @@
-const nodemailer = require('nodemailer');
-require('dotenv').config();
+const nodemailer = require("nodemailer");
+const expressAsyncHandler = require("express-async-handler");
+require("dotenv").config();
 //const { verifyToken, verifyUser } = require("../middleware/authMiddleware");
 //const { ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION, PODCAST_PUBLISH, PODCAST_DISCARDED_FROM_SYSTEM, PODCAST_DISCARDED } = require("../utils/emailBody");
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 const UnverifiedUser = require("../models/UnverifiedUserModel");
 const User = require("../models/UserModel");
-const admin = require("../models/admin/adminModel");
-const cache = require('memory-cache');
+const Admin = require("../models/admin/adminModel");
+const cache = require("memory-cache");
 const statusEnum = require("../utils/StatusEnum");
 const cooldownTime = 3600;
 const path = require("path");
 const {
   generateVerificationToken,
-  verifyVerificationToken
+  verifyVerificationToken,
+  hashToken,
 } = require("../services/security/tokenService");
 
+const { throwError } = require("../utils/throwError");
+const { sendSuccess } = require("../utils/response");
+const { HTTP_STATUS, ERROR_CODES } = require("../constants/errorConstants");
+const { ROLES } = require("../constants/roles");
+const { verifiedUserHtmlContent } = require("../templates/verification");
+
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -25,34 +33,40 @@ const transporter = nodemailer.createTransport({
 
 const getAdminAgreementHTML = async () => {
   try {
-    const filePath = path.join(__dirname, "..", "public", "admin-agreement.html");
+    const filePath = path.join(
+      __dirname,
+      "..",
+      "public",
+      "admin-agreement.html",
+    );
 
     const html = await fs.promises.readFile(filePath, "utf-8");
 
     return html;
-
   } catch (error) {
     console.error("Error reading HTML file:", error);
     throw new Error("Failed to load agreement HTML");
   }
 };
 
-const sendVerificationEmail = (email, token, isAdmin) => {
+const sendVerificationEmail = (email, token) => {
+  const cooldownKey = `verification-email:${email}`;
+  cache.put(cooldownKey, true, cooldownTime * 1000);
 
   const url = `${process.env.PROD_URL}/api/user/verifyEmail?token=${token}&isAdmin=${isAdmin}`;
   console.log("URL", url);
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'Email Verification',
+    subject: "Email Verification",
     html: `<h3>Please verify your email by clicking the link below:</h3><a href="${url}">${url}</a>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
 };
@@ -64,7 +78,7 @@ const sendContributorVerificationEmail = (email, password) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'Contribution Acknowledgement – UltimateHealth',
+    subject: "Contribution Acknowledgement – UltimateHealth",
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2>Welcome to UltimateHealth 👋</h2>
@@ -122,9 +136,9 @@ const sendContributorVerificationEmail = (email, password) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
 };
@@ -133,7 +147,7 @@ const Sendverifymail = async (req, res) => {
   const { email, token, isAdmin } = req.body;
 
   if (!email || !token) {
-    return res.status(400).json({ message: 'Email and token are required' });
+    return res.status(400).json({ message: "Email and token are required" });
   }
   console.log("Verify email admin", isAdmin);
   let user;
@@ -146,197 +160,176 @@ const Sendverifymail = async (req, res) => {
   const cooldownKey = `verification-email:${email}`;
 
   if (cache.get(cooldownKey)) {
-    return res.status(429).json({ message: 'Verification email already sent' });
+    return res.status(429).json({ message: "Verification email already sent" });
   }
 
-  cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
+  cache.put(cooldownKey, "true", cooldownTime * 1000); // store for 1 hour
 
   if (!user || user.isVerified) {
-    return res.status(400).json({ message: 'User not found or already verified' });
+    return res
+      .status(400)
+      .json({ message: "User not found or already verified" });
   } else {
     sendVerificationEmail(email, token, isAdmin);
   }
 
-  res.status(200).json({ message: 'Verification email sent' });
+  res.status(200).json({ message: "Verification email sent" });
 };
 
-const resendVerificationEmail = async (req, res) => {
-  const { email, isAdmin } = req.body;
+// const resendVerificationEmail = async (req, res) => {
+//   const { email, isAdmin } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ message: 'Email is required' });
-  }
+//   if (!email) {
+//     return res.status(400).json({ message: 'Email is required' });
+//   }
 
-  let user;
+//   let user;
 
-  if (isAdmin) {
-    user = await admin.findOne({ email });
-  } else {
-    user = await UnverifiedUser.findOne({ email: email });
-  }
+//   if (isAdmin) {
+//     user = await admin.findOne({ email });
+//   } else {
+//     user = await UnverifiedUser.findOne({ email: email });
+//   }
 
-  if (!user || user.isVerified) {
-    return res.status(400).json({ message: 'User not found or already verified' });
-  }
+//   if (!user || user.isVerified) {
+//     return res.status(400).json({ message: 'User not found or already verified' });
+//   }
 
-  const verificationToken = generateVerificationToken({ email });
-  sendVerificationEmail(email, verificationToken, isAdmin);
+//   const verificationToken = generateVerificationToken({ email });
+//   sendVerificationEmail(email, verificationToken, isAdmin);
 
-  const cooldownKey = `resend-verification-email:${email}`;
+//   const cooldownKey = `resend-verification-email:${email}`;
+
+//   if (cache.get(cooldownKey)) {
+//     return res.status(429).json({ message: 'Verification email already sent' });
+//   }
+
+//   cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
+
+//   res.status(200).json({ message: 'Verification email sent' });
+// };
+
+const resendVerificationEmail = expressAsyncHandler(async (req, res) => {
+  const { email } = req.validateBody;
+
+  const successMessage = "If account exists, verification email has been sent.";
+
+  const cooldownKey = `verification-email:${email}`;
 
   if (cache.get(cooldownKey)) {
-    return res.status(429).json({ message: 'Verification email already sent' });
+    return sendSuccess(res, HTTP_STATUS.OK, successMessage);
   }
 
-  cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
+  const [unverifiedUser, admin] = await Promise.all([
+    UnverifiedUser.findOne({ email }),
+    Admin.findOne({ email }),
+  ]);
 
-  res.status(200).json({ message: 'Verification email sent' });
-};
+  const account = unverifiedUser || admin;
+
+  if (!account) {
+    return sendSuccess(res, HTTP_STATUS.OK, successMessage);
+  }
+
+  if (admin && admin.isVerified) {
+    return sendSuccess(res, HTTP_STATUS.OK, successMessage);
+  }
+
+  const verificationToken = generateVerificationToken({
+    email: account.email,
+    role: admin ? "ADMIN" : account.isDoctor ? "DOCTOR" : "USER",
+  });
+  if (process.env.NODE_ENV === "development") {
+    console.log("Generated verification token:", verificationToken);
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    await sendVerificationEmail(email, verificationToken, !!admin);
+  }
+  cache.put(cooldownKey, true, cooldownTime * 1000);
+
+  return sendSuccess(res, HTTP_STATUS.OK, successMessage);
+});
 
 //verify email functionality
-const verifyEmail = async (req, res) => {
-  const { token, isAdmin } = req.query;
+const verifyEmail = expressAsyncHandler(async (req, res) => {
+  const { token } = req.query;
 
-  if (!token) {
-    return res.status(400).json({ error: 'Token is missing' });
+  if (!token || typeof token !== "string" || !token.trim()) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.MISSING_REQUIRED_FIELD,
+      "Verification token is required",
+    );
   }
 
-  try {
-    const decoded = verifyVerificationToken(token);
+  const decoded = verifyVerificationToken(token);
+  const { role, email, jti } = decoded;
 
-    if (isAdmin === 'true') {
-      const user = await admin.findOne({ email: decoded.email });
+  if (role === ROLES.ADMIN) {
+    const adminUser = await Admin.findOne({ email });
 
-      if (!user) {
-        return res.status(201).json({ message: 'Admin user not found, register yourself first' });
-      }
-
-       return res.redirect(`/admin-agreement.html?token=${token}`);
-      //  user.isVerified = true;
-      //  await user.save();
-    }
-    else {
-
-      const unverifiedUser = await UnverifiedUser.findOne({ email: decoded.email });
-
-      if (!unverifiedUser) {
-        return res.status(201).json({ message: 'Either email already verified or register yourself first' });
-      }
-
-      // Move user from UnverifiedUser to User collection
-      const newUser = new User({
-        user_name: unverifiedUser.user_name,
-        user_handle: unverifiedUser.user_handle,
-        email: unverifiedUser.email,
-        password: unverifiedUser.password,
-        isDoctor: unverifiedUser.isDoctor,
-        specialization: unverifiedUser.specialization,
-        qualification: unverifiedUser.qualification,
-        Years_of_experience: unverifiedUser.Years_of_experience,
-        contact_detail: unverifiedUser.contact_detail,
-        Profile_image: unverifiedUser.Profile_image,
-        isVerified: true
-      });
-
-      await newUser.save();
-      await UnverifiedUser.deleteOne({ email: unverifiedUser.email });
+    if (!adminUser) {
+      throwError(
+        HTTP_STATUS.UNAUTHORIZED,
+        ERROR_CODES.TOKEN_INVALID,
+        "Admin user not found",
+      );
     }
 
-    // Respond with an HTML page
-    res.send(`
-            <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verified</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f8ff;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            text-align: center;
-            max-width: 500px;
-            width: 100%;
-        }
-        .logo {
-            width: 100px;
-        }
-        h1 {
-            color: #007BFF;
-            margin-top: 0px;
-        }
-
-        h4 {
-            font-size: 18px;
-            color: #666;
-        }
-        p {
-            font-size: 15px;
-            color: #666;
-        }
-        .button {
-            background-color: #007BFF;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            text-decoration: none;
-            font-size: 16px;
-            cursor: pointer;
-              }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <img src="https://imgur.com/I5lDXoI.png" alt="Logo" class="logo">
-        <h1>Welcome ✅</h1>
-        <h4>Your account has been verified successfully.</h4>
-        <!-- <button onclick="openApp()">Open Your App</button> -->
-        <p>You can now close this page </p>
-    </div>
-
-    <script>
-        function openApp() {
-            var appScheme = 'your-app-scheme://';
-            var appStoreUrl = 'your-app-store-url';
-
-            var start = new Date().getTime();
-            var timeout;
-
-            function checkOpen() {
-                var end = new Date().getTime();
-                if (end - start < 1500) { // Adjust the timeout duration as needed
-                    window.location.href = appStoreUrl;
-                }
-            }
-
-            window.location = appScheme;
-            timeout = setTimeout(checkOpen, 1000);
-        }
-    </script>
-</body>
-</html>
-        `);
-  } catch (error) {
-    console.error('Error verifying email:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.redirect(`/admin-agreement.html#token=${token}`);
   }
-};
+
+  const hashedJti = hashToken(jti);
+
+  const unverifiedUser = await UnverifiedUser.findOne({
+    email,
+    hashedJti,
+  });
+
+  if (!unverifiedUser) {
+    throwError(
+      HTTP_STATUS.UNAUTHORIZED,
+      ERROR_CODES.TOKEN_INVALID,
+      "Either email already verified or register first",
+    );
+  }
+
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser) {
+    await UnverifiedUser.deleteOne({ _id: unverifiedUser._id });
+
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.USER_ALREADY_EXISTS,
+      "User already verified",
+    );
+  }
+
+  await User.create({
+    user_name: unverifiedUser.user_name,
+    user_handle: unverifiedUser.user_handle,
+    email: unverifiedUser.email,
+    password: unverifiedUser.password,
+    isDoctor: unverifiedUser.isDoctor,
+    specialization: unverifiedUser.specialization,
+    qualification: unverifiedUser.qualification,
+    Years_of_experience: unverifiedUser.Years_of_experience,
+    contact_detail: unverifiedUser.contact_detail,
+    Profile_image: unverifiedUser.Profile_image,
+    isVerified: true,
+  });
+
+  await UnverifiedUser.deleteOne({
+    _id: unverifiedUser._id,
+    hashedJti,
+  });
+
+  return res.send(verifiedUserHtmlContent);
+});
 
 const sendArticleFeedbackEmail = (email, feedback, title) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -432,15 +425,14 @@ const sendArticleFeedbackEmail = (email, feedback, title) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
 };
 
 const sendArticleForReviewEmail = (email, title) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -529,15 +521,14 @@ const sendArticleForReviewEmail = (email, title) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Review submission email sent:', info.response);
+      console.log("Review submission email sent:", info.response);
     }
   });
 };
 
 const sendPodcastForReviewEmail = (email, title) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -626,15 +617,14 @@ const sendPodcastForReviewEmail = (email, title) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Podcast review submission email sent:', info.response);
+      console.log("Podcast review submission email sent:", info.response);
     }
   });
 };
 
 const pickPodcastMail = (email, title) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -724,16 +714,14 @@ const pickPodcastMail = (email, title) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Pick podcast email sent:', info.response);
+      console.log("Pick podcast email sent:", info.response);
     }
   });
 };
 
-
 const pickArticleMail = (email, title) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -823,17 +811,15 @@ const pickArticleMail = (email, title) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Pick article email sent:', info.response);
+      console.log("Pick article email sent:", info.response);
     }
   });
 };
 
 // Later will centralize all email body, once the thing is integrated in frontend
 const sendArticlePublishedEmail = (email, articleLink, title) => {
-
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -924,16 +910,14 @@ const sendArticlePublishedEmail = (email, articleLink, title) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
 };
 
 const sendPodcastPublishedEmail = (email, podcastLink, title) => {
-
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -1024,20 +1008,21 @@ const sendPodcastPublishedEmail = (email, podcastLink, title) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
 };
 
 const sendPodcastDiscardEmail = (email, status, title, reason) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
     subject: `Podcast Discarded ${title}`,
-    html: status !== statusEnum.statusEnum.REVIEW_PENDING ? `<html>
+    html:
+      status !== statusEnum.statusEnum.REVIEW_PENDING
+        ? `<html>
   <head>
       <style>
           body {
@@ -1123,8 +1108,8 @@ const sendPodcastDiscardEmail = (email, status, title, reason) => {
       </div>
   </body>
 </html>
-` :
-      `<html>
+`
+        : `<html>
   <head>
       <style>
           body {
@@ -1213,20 +1198,21 @@ const sendPodcastDiscardEmail = (email, status, title, reason) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
 };
 
 const sendArticleDiscardEmail = (email, status, title, reason) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
     subject: `Article Discarded ${title}`,
-    html: status === statusEnum.statusEnum.UNASSIGNED ? `<html>
+    html:
+      status === statusEnum.statusEnum.UNASSIGNED
+        ? `<html>
   <head>
       <style>
           body {
@@ -1310,8 +1296,8 @@ const sendArticleDiscardEmail = (email, status, title, reason) => {
       </div>
   </body>
 </html>
-` :
-      `<html>
+`
+        : `<html>
   <head>
       <style>
           body {
@@ -1402,15 +1388,14 @@ const sendArticleDiscardEmail = (email, status, title, reason) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
 };
 
 const sendMailArticleDiscardByAdmin = (email, title, discardReason) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -1471,22 +1456,20 @@ const sendMailArticleDiscardByAdmin = (email, title, discardReason) => {
                 </div>
             </body>
             </html>
-            `
+            `,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
-
-}
+};
 
 // send email on approval of edit request
 const sendMailOnEditRequestApproval = (email, title) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -1544,17 +1527,17 @@ const sendMailOnEditRequestApproval = (email, title) => {
                 </div>
             </div>
         </body>
-        </html>`
+        </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Verification email sent:', info.response);
+      console.log("Verification email sent:", info.response);
     }
   });
-}
+};
 
 /** Report related mail */
 const sendReportUndertakenEmail = (email, issueNumber) => {
@@ -1575,20 +1558,19 @@ const sendReportUndertakenEmail = (email, issueNumber) => {
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending report undertaken email:', err);
+      console.error("Error sending report undertaken email:", err);
     } else {
-      console.log('Report undertaken email sent:', info.response);
+      console.log("Report undertaken email sent:", info.response);
     }
   });
 };
 
 // Send Mail (Optional)
 const sendInitialReportMailtoVictim = async (email) => {
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'Thank You for Reporting - Your Concern is Being Addressed',
+    subject: "Thank You for Reporting - Your Concern is Being Addressed",
     html: `
   <html>
       <head>
@@ -1669,33 +1651,33 @@ const sendInitialReportMailtoVictim = async (email) => {
         </div>
       </body>
     </html>
-`
+`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Report email sent:', info.response);
+      console.log("Report email sent:", info.response);
     }
   });
-}
+};
 
 // Send mail to the user against whom the report is submitted
 
 const sendInitialReportMailtoConvict = async (email, details, reportType) => {
-
-  const reportDetails = reportType === 'content' ?
-    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFFAF0; border-radius: 8px;">
+  const reportDetails =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFFAF0; border-radius: 8px;">
        <h3 style="color: #FF6347;">Reported Content:</h3>
        <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.title}</p>
-     </div>` :
-    `<div style="padding: 15px; border: 2px solid #4682B4; background-color: #F0F8FF; border-radius: 8px;">
+     </div>`
+      : `<div style="padding: 15px; border: 2px solid #4682B4; background-color: #F0F8FF; border-radius: 8px;">
        <h3 style="color: #4682B4;">Reported Comment:</h3>
        <p><strong>Comment ID:</strong> ${details.commentId}</p>
        <p><strong>Comment:</strong> ${details.comment}</p>
-     </div>`
+     </div>`;
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -1781,26 +1763,32 @@ const sendInitialReportMailtoConvict = async (email, details, reportType) => {
           </div>
         </body>
       </html>
-`
+`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email:', err);
+      console.error("Error sending email:", err);
     } else {
-      console.log('Report email sent:', info.response);
+      console.log("Report email sent:", info.response);
     }
   });
-}
+};
 
-const sendResolvedMailToVictim = async (email, details, reportType, resolution) => {
-  const resolvedDetails = reportType === 'content' ?
-    `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
+const sendResolvedMailToVictim = async (
+  email,
+  details,
+  reportType,
+  resolution,
+) => {
+  const resolvedDetails =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #32CD32;">Reported Content (Resolved):</h3>
        <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
-     </div>` :
-    `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
+     </div>`
+      : `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #32CD32;">Reported Comment (Resolved):</h3>
        <p><strong>Comment ID:</strong> ${details.commentId}</p>
        <p><strong>Comment:</strong> ${details.content}</p>
@@ -1864,26 +1852,27 @@ const sendResolvedMailToVictim = async (email, details, reportType, resolution) 
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email to victim:', err);
+      console.error("Error sending email to victim:", err);
     } else {
-      console.log('Resolved report email sent to victim:', info.response);
+      console.log("Resolved report email sent to victim:", info.response);
     }
   });
 };
 
 const sendResolvedMailToConvict = async (email, details, reportType) => {
-  const resolvedDetails = reportType === 'content' ?
-    `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
+  const resolvedDetails =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
        <h3 style="color: #FFA500;">Your Content Was Reported:</h3>
        <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
-     </div>` :
-    `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
+     </div>`
+      : `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
        <h3 style="color: #FFA500;">Your Comment Was Reported:</h3>
        <p><strong>Comment ID:</strong> ${details.commentId}</p>
        <p><strong>Comment:</strong> ${details.content}</p>
@@ -1947,27 +1936,34 @@ const sendResolvedMailToConvict = async (email, details, reportType) => {
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending email to convict:', err);
+      console.error("Error sending email to convict:", err);
     } else {
-      console.log('Resolved report email sent to convict:', info.response);
+      console.log("Resolved report email sent to convict:", info.response);
     }
   });
 };
 
 // Misuse of report feature
-const sendWarningMailToVictimOnReportDismissOrIgnore = async (email, details, reportType, reason, misuseCount) => {
-  const reportSummary = reportType === 'content' ?
-    `<div style="padding: 15px; border: 2px solid #FFD700; background-color: #FFFACD; border-radius: 8px;">
+const sendWarningMailToVictimOnReportDismissOrIgnore = async (
+  email,
+  details,
+  reportType,
+  reason,
+  misuseCount,
+) => {
+  const reportSummary =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #FFD700; background-color: #FFFACD; border-radius: 8px;">
        <h3 style="color: #DAA520;">Reported Content:</h3>
        <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
-     </div>` :
-    `<div style="padding: 15px; border: 2px solid #FFD700; background-color: #FFFACD; border-radius: 8px;">
+     </div>`
+      : `<div style="padding: 15px; border: 2px solid #FFD700; background-color: #FFFACD; border-radius: 8px;">
        <h3 style="color: #DAA520;">Reported Comment:</h3>
        <p><strong>Comment ID:</strong> ${details.commentId}</p>
        <p><strong>Comment:</strong> ${details.content}</p>
@@ -2046,26 +2042,31 @@ const sendWarningMailToVictimOnReportDismissOrIgnore = async (email, details, re
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending warning email to victim:', err);
+      console.error("Error sending warning email to victim:", err);
     } else {
-      console.log('Warning email sent to victim:', info.response);
+      console.log("Warning email sent to victim:", info.response);
     }
   });
 };
 
-const sendDismissedOrIgnoreMailToConvict = async (email, details, reportType) => {
-  const dismissedDetails = reportType === 'content' ?
-    `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
+const sendDismissedOrIgnoreMailToConvict = async (
+  email,
+  details,
+  reportType,
+) => {
+  const dismissedDetails =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #228B22;">Content Report Dismissed:</h3>
        <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
-     </div>` :
-    `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
+     </div>`
+      : `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #228B22;">Comment Report Dismissed:</h3>
        <p><strong>Comment ID:</strong> ${details.commentId}</p>
        <p><strong>Comment:</strong> ${details.content}</p>
@@ -2130,26 +2131,33 @@ const sendDismissedOrIgnoreMailToConvict = async (email, details, reportType) =>
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending dismissal email to convict:', err);
+      console.error("Error sending dismissal email to convict:", err);
     } else {
-      console.log('Dismissal email sent to convict:', info.response);
+      console.log("Dismissal email sent to convict:", info.response);
     }
   });
 };
 
-const sendWarningMailToConvict = async (email, details, reportType, reason, strikeCount = 1) => {
-  const warningDetails = reportType === 'content' ?
-    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
+const sendWarningMailToConvict = async (
+  email,
+  details,
+  reportType,
+  reason,
+  strikeCount = 1,
+) => {
+  const warningDetails =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
        <h3 style="color: #FF6347;">Violated Content:</h3>
        <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
-     </div>` :
-    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
+     </div>`
+      : `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
        <h3 style="color: #FF6347;">Violated Comment:</h3>
        <p><strong>Comment ID:</strong> ${details.commentId}</p>
        <p><strong>Comment:</strong> ${details.content}</p>
@@ -2237,26 +2245,32 @@ const sendWarningMailToConvict = async (email, details, reportType, reason, stri
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending warning email to convict:', err);
+      console.error("Error sending warning email to convict:", err);
     } else {
-      console.log('Warning email sent to convict:', info.response);
+      console.log("Warning email sent to convict:", info.response);
     }
   });
 };
 
-const sendRemoveContentMailToConvict = async (email, details, reportType, reason) => {
-  const warningDetails = reportType === 'content' ?
-    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
+const sendRemoveContentMailToConvict = async (
+  email,
+  details,
+  reportType,
+  reason,
+) => {
+  const warningDetails =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
        <h3 style="color: #FF6347;">Violated Content:</h3>
        <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
-     </div>` :
-    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
+     </div>`
+      : `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
        <h3 style="color: #FF6347;">Violated Comment:</h3>
        <p><strong>Comment ID:</strong> ${details.commentId}</p>
        <p><strong>Comment:</strong> ${details.content}</p>
@@ -2344,14 +2358,14 @@ const sendRemoveContentMailToConvict = async (email, details, reportType, reason
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending warning email to convict:', err);
+      console.error("Error sending warning email to convict:", err);
     } else {
-      console.log('Warning email sent to convict:', info.response);
+      console.log("Warning email sent to convict:", info.response);
     }
   });
 };
@@ -2431,14 +2445,14 @@ const sendRestoreContentMailToUser = async (email, articleTitle) => {
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending restore content email:', err);
+      console.error("Error sending restore content email:", err);
     } else {
-      console.log('Restore content email sent:', info.response);
+      console.log("Restore content email sent:", info.response);
     }
   });
 };
@@ -2519,14 +2533,14 @@ const sendRestoreRequestReceivedMail = async (email, articleTitle) => {
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending restore request received email:', err);
+      console.error("Error sending restore request received email:", err);
     } else {
-      console.log('Restore request received email sent:', info.response);
+      console.log("Restore request received email sent:", info.response);
     }
   });
 };
@@ -2605,27 +2619,27 @@ const sendRestoreRequestDisapprovedMail = async (email, articleTitle) => {
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending disapproval email:', err);
+      console.error("Error sending disapproval email:", err);
     } else {
-      console.log('Disapproval email sent:', info.response);
+      console.log("Disapproval email sent:", info.response);
     }
   });
 };
 
-
 const sendBlockConvictMail = async (email, details, reportType, reason) => {
-  const reportedItem = reportType === 'content'
-    ? `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
+  const reportedItem =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
          <h3 style="color: #DC143C;">Violated Content:</h3>
          <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
          <p><strong>Description:</strong> ${details.content}</p>
        </div>`
-    : `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
+      : `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
          <h3 style="color: #DC143C;">Violated Comment:</h3>
          <p><strong>Comment ID:</strong> ${details.commentId}</p>
          <p><strong>Comment:</strong> ${details.content}</p>
@@ -2735,26 +2749,27 @@ const sendBlockConvictMail = async (email, details, reportType, reason) => {
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending block email to convict:', err);
+      console.error("Error sending block email to convict:", err);
     } else {
-      console.log('Block email sent to convict:', info.response);
+      console.log("Block email sent to convict:", info.response);
     }
   });
 };
 
 const sendBannedUserMail = async (email, details, reportType, reason) => {
-  const reportedItem = reportType === 'content'
-    ? `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
+  const reportedItem =
+    reportType === "content"
+      ? `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
          <h3 style="color: #8B0000;">Violated Content:</h3>
          <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
          <p><strong>Description:</strong> ${details.content}</p>
        </div>`
-    : `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
+      : `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
          <h3 style="color: #8B0000;">Violated Comment:</h3>
          <p><strong>Comment ID:</strong> ${details.commentId}</p>
          <p><strong>Comment:</strong> ${details.content}</p>
@@ -2844,14 +2859,14 @@ const sendBannedUserMail = async (email, details, reportType, reason) => {
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending ban email to user:', err);
+      console.error("Error sending ban email to user:", err);
     } else {
-      console.log('Ban email sent to user:', info.response);
+      console.log("Ban email sent to user:", info.response);
     }
   });
 };
@@ -2924,7 +2939,7 @@ const sendUnblockUserMail = async (email, username) => {
             ✅ Your Account Has Been Unblocked
           </div>
           <div class="content">
-            <p>Hello${username ? ` ${username}` : ''},</p>
+            <p>Hello${username ? ` ${username}` : ""},</p>
 
             <p>We’re pleased to inform you that the temporary block on your account has now been lifted. You have regained full access to your account features.</p>
 
@@ -2945,14 +2960,14 @@ const sendUnblockUserMail = async (email, username) => {
           </div>
         </div>
       </body>
-    </html>`
+    </html>`,
   };
 
   transporter.sendMail(mailOptions, (err, info) => {
     if (err) {
-      console.error('Error sending unblock email:', err);
+      console.error("Error sending unblock email:", err);
     } else {
-      console.log('Unblock email sent successfully:', info.response);
+      console.log("Unblock email sent successfully:", info.response);
     }
   });
 };
@@ -2974,9 +2989,7 @@ const sendOtpMail = async (email, otp) => {
   });
 
   return true;
-}
-
-
+};
 
 module.exports = {
   sendVerificationEmail,
@@ -3010,8 +3023,5 @@ module.exports = {
   sendPodcastForReviewEmail,
   sendPodcastDiscardEmail,
   sendOtpMail,
-  sendContributorVerificationEmail
+  sendContributorVerificationEmail,
 };
-
-
-
