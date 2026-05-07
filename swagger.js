@@ -176,6 +176,35 @@ const options = {
             viewCount: { type: "number" },
             likeCount: { type: "number" },
             language: { type: "string" },
+            isTranslation: {
+              type: "boolean",
+              description: "Whether this article is a translated version of another article"
+            },
+            sourceArticleId: {
+              type: "number",
+              nullable: true,
+              description: "Source article ID for translated articles"
+            },
+            sourceArticleRecordId: {
+              type: "string",
+              nullable: true,
+              description: "Pocketbase record ID of the source article"
+            },
+            sourceLanguage: {
+              type: "string",
+              nullable: true,
+              description: "Language code of the source article"
+            },
+            translationOf: {
+              type: "number",
+              nullable: true,
+              description: "Article ID this translation belongs to"
+            },
+            translatedArticles: {
+              type: "array",
+              items: { $ref: "#/components/schemas/Article" },
+              description: "Published translation articles linked to this article"
+            },
             adminPost: { type: "boolean" },
             likedUsers: { type: "array", items: { $ref: "#/components/schemas/User" } },
             repostUsers: {

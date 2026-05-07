@@ -84,6 +84,33 @@ const articleSchema = new Schema({
     required: true,
     default: 'English',
   },
+  isTranslation:{
+    type: Boolean,
+    default: false,
+  },
+  sourceArticleId:{
+    type: Number,
+    ref: 'Article',
+    default: null,
+  },
+  sourceArticleRecordId:{
+    type: String,
+    default: null,
+  },
+  sourceLanguage:{
+    type: String,
+    default: null,
+  },
+  translationOf:{
+    type: Number,
+    ref: 'Article',
+    default: null,
+  },
+  translatedArticles: [{
+    type: Number,
+    ref: 'Article',
+    default: []
+  }],
   adminPost: {
     type: Boolean,
     required: true,

@@ -14,7 +14,23 @@ module.exports.createArticle = expressAsyncHandler(
   async (req, res) => {
     try {
 
-      const { authorId, title, authorName, description, content, tags, imageUtils, pb_recordId, allow_podcast, language = 'en-IN' } = req.body; // Destructure required fields from req.body
+      const {
+        authorId,
+        title,
+        authorName,
+        description,
+        content,
+        tags,
+        imageUtils,
+        pb_recordId,
+        allow_podcast,
+        language = 'en-IN',
+        isTranslation = false,
+        sourceArticleId,
+        sourceArticleRecordId,
+        sourceLanguage,
+        translationOf,
+      } = req.body; // Destructure required fields from req.body
 
 
       if (!authorId || !title || !authorName || !description || !content
@@ -56,6 +72,43 @@ module.exports.createArticle = expressAsyncHandler(
         return res.status(403).json({ error: "User is blocked or banned." });
       }
 
+      let sourceArticle = null;
+      const requestedTranslation = Boolean(isTranslation || sourceArticleId || translationOf);
+
+      if (requestedTranslation) {
+        const articleToTranslate = Number(sourceArticleId || translationOf);
+
+        if (!articleToTranslate || Number.isNaN(articleToTranslate)) {
+          return res.status(400).json({ error: "A valid source article ID is required for translations" });
+        }
+
+        sourceArticle = await Article.findById(articleToTranslate);
+
+        if (!sourceArticle || sourceArticle.is_removed) {
+          return res.status(404).json({ error: "Source article not found" });
+        }
+
+        const originalLanguage = sourceLanguage || sourceArticle.language;
+
+        if (originalLanguage === language) {
+          return res.status(400).json({ error: "Translation language must be different from the source article language" });
+        }
+
+        const existingTranslation = await Article.findOne({
+          $or: [
+            { translationOf: sourceArticle._id },
+            { sourceArticleId: sourceArticle._id },
+          ],
+          language,
+          is_removed: false,
+          status: { $ne: statusEnum.statusEnum.DISCARDED },
+        });
+
+        if (existingTranslation) {
+          return res.status(409).json({ error: "A translation for this article and language already exists" });
+        }
+      }
+
       // Create a new article instance
       const newArticle = new Article({
         title,
@@ -65,6 +118,11 @@ module.exports.createArticle = expressAsyncHandler(
         description,
         imageUtils,
         language,
+        isTranslation: requestedTranslation,
+        sourceArticleId: sourceArticle ? sourceArticle._id : null,
+        sourceArticleRecordId: sourceArticleRecordId || (sourceArticle ? sourceArticle.pb_recordId : null),
+        sourceLanguage: sourceArticle ? sourceLanguage || sourceArticle.language : null,
+        translationOf: sourceArticle ? sourceArticle._id : null,
         authorId: user._id, // Set authorId to the user's ObjectId
         pb_recordId,
         allow_for_podcast: allow_podcast
@@ -77,13 +135,22 @@ module.exports.createArticle = expressAsyncHandler(
       // Update the user's articles field
       user.articles.push(newArticle._id);
 
+      if (sourceArticle) {
+        await Article.findByIdAndUpdate(sourceArticle._id, {
+          $addToSet: { translatedArticles: newArticle._id }
+        });
+      }
+
       // await updateWriteEvents(newArticle._id, user.id);
 
       await user.save();
 
       sendArticleForReviewEmail(user.email, title);
       // Respond with a success message and the new article
-      res.status(201).json({ message: "Article under reviewed", newArticle });
+      res.status(201).json({
+        message: requestedTranslation ? "Translation under reviewed" : "Article under reviewed",
+        newArticle
+      });
 
     } catch (error) {
       console.log("Article Creation Error", error);
@@ -406,6 +473,18 @@ module.exports.getArticleById = expressAsyncHandler(
             }
           }
         })
+        .populate({
+          path: 'translationOf',
+          select: '_id title language pb_recordId'
+        })
+        .populate({
+          path: 'translatedArticles',
+          select: '_id title description language imageUtils pb_recordId status',
+          match: {
+            is_removed: false,
+            status: statusEnum.statusEnum.PUBLISHED
+          }
+        })
         .exec();
 
       if (!article || article.is_removed) {
@@ -428,6 +507,9 @@ module.exports.getArticleById = expressAsyncHandler(
         article.authorId.followers = article.authorId.followers.filter(user => user !== null);
       }
 
+      if (Array.isArray(article.translatedArticles)) {
+        article.translatedArticles = article.translatedArticles.filter(article => article !== null);
+      }
 
 
 
@@ -436,6 +518,55 @@ module.exports.getArticleById = expressAsyncHandler(
       res
         .status(500)
         .json({ error: "Error fetching article", details: error.message });
+    }
+  }
+)
+
+module.exports.getArticleTranslations = expressAsyncHandler(
+  async (req, res) => {
+    try {
+      const { language } = req.query;
+      const article = await Article.findById(Number(req.params.id));
+
+      if (!article || article.is_removed) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      const rootArticleId = article.isTranslation && article.translationOf
+        ? article.translationOf
+        : article._id;
+
+      const query = {
+        $or: [
+          { translationOf: rootArticleId },
+          { sourceArticleId: rootArticleId },
+        ],
+        is_removed: false,
+        status: statusEnum.statusEnum.PUBLISHED,
+      };
+
+      if (language) {
+        query.language = language;
+      }
+
+      const translations = await Article.find(query)
+        .populate('tags')
+        .populate({
+          path: 'authorId',
+          select: 'Profile_image user_name user_handle',
+          match: {
+            isBlockUser: false,
+            isBannedUser: false
+          }
+        })
+        .sort({ lastUpdated: -1 })
+        .exec();
+
+      res.status(200).json({ translations });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: "Error fetching article translations", details: error.message });
     }
   }
 )
