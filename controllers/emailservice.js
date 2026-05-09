@@ -2976,9 +2976,53 @@ const sendOtpMail = async (email, otp) => {
   return true;
 }
 
+const sendNewArticleEmail = (email, title, authorName, articleLink) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `New Article Published: ${title}`,
+    html: `<html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; background-color: #f4f7fc; }
+                        .container { width: 80%; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+                        .header { background-color: #00BFFF; color: white; padding: 15px; border-radius: 8px 8px 0 0; text-align: center; }
+                        .content { padding: 20px; }
+                        .footer { text-align: center; font-size: 14px; color: #777; padding: 10px; }
+                        .btn { background-color: #28a745; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>New Article Published!</h1>
+                        </div>
+                        <div class="content">
+                            <p>Hello,</p>
+                            <p>A new article titled <strong>${title}</strong> by <strong>${authorName}</strong> has just been published on UltimateHealth.</p>
+                            <p>Read the full article by clicking the link below:</p>
+                            <a href="${articleLink}" class="btn">Read Article</a>
+                        </div>
+                        <div class="footer">
+                            <p>Best regards,<br>UltimateHealth Team</p>
+                        </div>
+                    </div>
+                </body>
+            </html>`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending new article email:', err);
+    } else {
+      console.log('New article email sent:', info.response);
+    }
+  });
+};
 
 
 module.exports = {
+  sendNewArticleEmail,
   sendVerificationEmail,
   verifyEmail,
   Sendverifymail,

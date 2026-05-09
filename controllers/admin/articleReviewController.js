@@ -2,7 +2,7 @@ const expressAsyncHandler = require('express-async-handler');
 const Article = require('../../models/Articles');
 const admin = require('../../models/admin/adminModel');
 const User = require('../../models/UserModel');
-const { articleReviewNotificationsToUser, articleSubmitNotificationsToAdmin } = require('../notifications/notificationHelper');
+const { articleReviewNotificationsToUser, articleSubmitNotificationsToAdmin, broadcastNewArticlePublished } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
 const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin, pickArticleMail } = require('../emailservice');
@@ -433,6 +433,7 @@ module.exports.publishArticle = expressAsyncHandler(
                 "Keep contributing! We encourage you to keep sharing valuable content with us."
             );
             // send notification
+            broadcastNewArticlePublished(article._id);
 
             res.status(200).json({ message: "Article Published" });
 

@@ -3,6 +3,8 @@ const admin = require('../../config/firebase');
 const User = require('../../models/UserModel');
 const Notification = require('../../models/notificationSchema');
 const Admin = require('../../models/admin/adminModel');
+const Article = require('../../models/Articles');
+const { sendNewArticleEmail } = require('../emailservice');
 
 
 /**
@@ -511,5 +513,68 @@ module.exports.articleSubmitNotificationsToAdmin =
 // Task left
 // Notification URL set up (done)
 // Podcast notification with notification url (done)
-// Connection between general post and user follower post (pagination with content uploads)
 // Auth middleware change for admin and user (done)
+
+module.exports.broadcastNewArticlePublished = async (articleId) => {
+    try {
+        const article = await Article.findById(articleId).populate('tags authorId').exec();
+        if (!article || article.is_removed) return;
+
+        const isHealthCategory = article.tags.some(tag => tag.name.toLowerCase() === 'health');
+
+        let usersToNotify = [];
+        if (isHealthCategory) {
+            usersToNotify = await User.find({ isBlockUser: false, isBannedUser: false });
+        } else {
+            usersToNotify = await User.find({
+                isBlockUser: false,
+                isBannedUser: false,
+                $or: [
+                    { _id: { $in: article.authorId.followers } },
+                    { 'notificationPreferences.contentClusters': { $in: article.tags.map(t => t._id) } }
+                ]
+            });
+        }
+
+        const articleLink = `https://uhsocial.in/api/share/blog/${article.pb_recordId}`;
+
+        // Asynchronously dispatch notifications
+        usersToNotify.forEach(async (user) => {
+            try {
+                // Send email
+                if (user.email) {
+                    sendNewArticleEmail(user.email, article.title, article.authorId.user_name, articleLink);
+                }
+
+                // Send push notification
+                if (user.fcmToken) {
+                    const notification = new Notification({
+                        userId: user._id,
+                        adminId: null,
+                        articleId: article._id,
+                        podcastId: null,
+                        articleRecordId: article.pb_recordId,
+                        revisonId: null,
+                        commentId: null,
+                        type: 'article',
+                        title: `New Article by ${article.authorId.user_name}`,
+                        message: article.title,
+                        read: false,
+                        timestamp: Date.now()
+                    });
+                    await notification.save();
+
+                    sendPushNotification(user.fcmToken, {
+                        title: `New Article by ${article.authorId.user_name}`,
+                        body: article.title
+                    });
+                }
+            } catch (err) {
+                console.error(`Error notifying user ${user._id} for article ${article._id}:`, err);
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in broadcastNewArticlePublished:', error);
+    }
+};

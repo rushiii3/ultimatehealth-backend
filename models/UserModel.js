@@ -170,6 +170,13 @@ const userSchema = new mongoose.Schema({
     blockedAt: {
         type: Date,
         default: null,
+    },
+    notificationPreferences: {
+        contentClusters: [{
+            type: Schema.Types.ObjectId,
+            ref: 'ArticleTag',
+            default: []
+        }]
     }
 
 });

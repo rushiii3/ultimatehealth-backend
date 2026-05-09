@@ -1472,4 +1472,46 @@ module.exports.updateUserPassword = expressAsyncHandler(
   }
 );
 
+// update notification preferences
+module.exports.updateNotificationPreferences = expressAsyncHandler(
+  async (req, res) => {
+    try {
+      const { contentClusters } = req.body;
+
+      if (!Array.isArray(contentClusters)) {
+        return res.status(400).json({ error: "contentClusters must be an array" });
+      }
+
+      const user = await User.findById(req.userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      if (!user.notificationPreferences) {
+        user.notificationPreferences = { contentClusters: [] };
+      }
+
+      user.notificationPreferences.contentClusters = contentClusters;
+      await user.save();
+
+      res.status(200).json({ message: "Notification preferences updated successfully", preferences: user.notificationPreferences });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// get notification preferences
+module.exports.getNotificationPreferences = expressAsyncHandler(
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.userId).populate('notificationPreferences.contentClusters');
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      res.status(200).json({ preferences: user.notificationPreferences || { contentClusters: [] } });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
 
