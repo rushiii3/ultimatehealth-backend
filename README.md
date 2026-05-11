@@ -181,7 +181,24 @@ We welcome contributions! This backend is open for **students, developers, and o
 
 ---
 
-**We appreciate every contribution** — big or small! 💙
+<div align = "center">
+ <h3>Thank you for contributing to our repository</h3>
+ <h1> We appreciate your help in making UltimateHealth even better.😃</h1>
+
+
+ <table>
+  <p align="center">
+  <tr>
+    <td align="center"><a href="https://github.com/SB2318"><img src="https://avatars.githubusercontent.com/u/87614560?v=4" width="120px;" alt=""/><br/><sub><b>Susmita Bhattacharya</b></sub></a></td>
+    <td align="center"><a href="https://github.com/rushiii3"><img src="https://avatars.githubusercontent.com/u/105168088?v=4" width="120px;" alt=""/><br/><sub><b>HRUSHIKESH SHINDE</b></sub></a></td>
+    <td align="center"><a href="https://github.com/ionfwsrijan"><img src="https://avatars.githubusercontent.com/u/201338831?v=4" width="120px;" alt=""/><br/><sub><b>SrijanCodes</b></sub></a></td>
+ 
+     
+ </tr>
+ </table>
+ </div>
+
+
 
 If you're new to open source, feel free to ask questions by opening a Discussion or commenting on an issue.
 
