@@ -117,7 +117,7 @@ router.post('/articles/tags',adminAuthenticateToken, articleController.addNewTag
  *                   example: "Internal server error"
  */
 
-router.get('/articles/tags', authenticateToken, articleController.getAllTags);
+router.get('/articles/tags', articleController.getAllTags); // auth removed for guest profile, purpose: user can see available categories in unauthenticated state
 /**
  * @openapi
  * /articles/tags/{id}:
@@ -498,7 +498,7 @@ router.post('/articles',authenticateToken, articleController.createArticle);
  *                   example: "Error fetching articles"
  */
 
-router.get('/articles', articleController.getAllArticles);
+router.get('/articles', articleController.getAllArticles); // auth removed for guest profile, purpose: user can view articles in unauthenticated state
 
 /**
  * @openapi
@@ -565,7 +565,7 @@ router.get('/articles', articleController.getAllArticles);
  *                   example: "Error fetching article"
  */
 
-router.get('/articles/:id', articleController.getArticleById);
+router.get('/articles/:id', articleController.getArticleById); // auth removed for guest profile, purpose: user can view article in unauthenticated state
 
 /**
  * @deprecated

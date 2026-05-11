@@ -292,7 +292,7 @@ router.get('/podcast/playlist-details', authenticateToken, getPodcastsByPlaylist
  *                   type: string
  *                   example: Internal server error
  */
-router.get('/podcast/published-podcasts', getAllPublishedPodcasts);
+router.get('/podcast/published-podcasts', getAllPublishedPodcasts); // auth removed for guest profile, purpose: user can listen podcasts in unauthenticated state
 
 /**
  * @swagger
@@ -442,7 +442,7 @@ router.get('/podcast/details', getPodcastById);
  *                   type: string
  *                   example: Internal server error
  */
-router.get('/podcast/search', searchPodcast);
+router.get('/podcast/search', searchPodcast); // auth removed for guest profile, purpose: user can search podcasts in unauthenticated state
 
 /**
  * @swagger
@@ -515,7 +515,7 @@ router.get('/podcast/search', searchPodcast);
  *                   type: string
  *                   example: Internal server error
  */
-router.post('/podcast/filter', authenticateToken, filterPodcast);
+router.post('/podcast/filter', filterPodcast); // auth removed for guest profile, purpose: user can filter podcast in unauthenticated state
 
 /**
  * @swagger

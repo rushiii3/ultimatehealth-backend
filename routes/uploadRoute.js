@@ -21,7 +21,7 @@ uploadRoute.post('/upload-pocketbase/improvement', authenticateToken,  controlle
 
 uploadRoute.post('/publish-improvement-from-pocketbase', adminAuthenticateToken, controller.publishImprovementFileFromPocketbase);
 
-uploadRoute.get('/articles/get-article-content/:id', authenticateToken, controller.getPbFile);
+uploadRoute.get('/articles/get-article-content/:id', controller.getPbFile); // auth removed for guest profile, purpose: user can read article in unauthenticated state
 uploadRoute.get('/article/get-improve-content', authenticateToken, controller.getIMPFile);
 
 
