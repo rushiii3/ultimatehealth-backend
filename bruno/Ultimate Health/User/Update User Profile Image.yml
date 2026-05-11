@@ -1,16 +1,16 @@
 info:
-  name: Forgot Password
+  name: Update User Profile Image
   type: http
-  seq: 8
+  seq: 13
 
 http:
   method: POST
-  url: "{{baseUrl}}/api/user/forgotpassword"
+  url: "{{baseUrl}}/api/user/update-profile-image"
   body:
     type: json
     data: |-
       {
-        "email": "test3@gmail.com"
+        "profileImageUrl": "https://github.com/usebruno/bruno/discussions/954"
       }
   auth: inherit
 

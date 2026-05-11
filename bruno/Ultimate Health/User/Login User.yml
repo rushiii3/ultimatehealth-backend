@@ -11,7 +11,7 @@ http:
     data: |-
       {
         "email": "test3@gmail.com",
-        "password": "Test@123",
+        "password": "Password@123 ",
         "fcmToken": "cMu4J5N9RWuGBxfs5l0YDC:APA91bG3l51EGJq8pawwGWDTJsSmofECJUGR2G4qzkf8NXZFTJKmvwX__SVQHp08vghKM_RwBLV9B5IoStlu9Ydo315_fJ7ycyYzmEWdHVYAwiJATmeHZWQ"
       }
 

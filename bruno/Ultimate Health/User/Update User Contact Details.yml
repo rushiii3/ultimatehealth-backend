@@ -1,16 +1,17 @@
 info:
-  name: Forgot Password
+  name: Update User Contact Details
   type: http
-  seq: 8
+  seq: 17
 
 http:
-  method: POST
-  url: "{{baseUrl}}/api/user/forgotpassword"
+  method: PUT
+  url: "{{baseUrl}}/api/user/update-contact-details"
   body:
     type: json
     data: |-
       {
-        "email": "test3@gmail.com"
+        "phone": "7845673412",
+        "email": "test@gmail.com"
       }
   auth: inherit
 

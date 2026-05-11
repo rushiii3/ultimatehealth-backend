@@ -10,7 +10,7 @@ const {
   getMyProfile,
   getPublicProfile,
   // isSamePassword,
-  updateUserPassword,
+  updateUserPasswordById,
   updateUserOtp,
   loginUser,
   deleteUserByEmail,
@@ -25,7 +25,10 @@ const {
   incrementOtpAttemptsUser,
   updateUserPasswordAndClearOtp,
   logoutUser,
-  deleteUserById
+  deleteUserById,
+  updateUserProfilePictureById,
+  updateUserGeneralDetailsById,
+  updateUserContactDetailsById
 } = require("../services/db/userService");
 
 const {
@@ -854,7 +857,7 @@ module.exports.updateProfileImage = expressAsyncHandler(async (req, res) => {
     );
   }
 
-  let user = await findUserById(req.userId);
+  const user = await findUserById(req.user.userId);
 
   if (!user) {
     throwError(
@@ -873,8 +876,15 @@ module.exports.updateProfileImage = expressAsyncHandler(async (req, res) => {
   }
 
   // Update the profile image URL
-  user.Profile_image = profileImageUrl;
-  await user.save();
+  const updatedUser = await updateUserProfilePictureById(user._id, profileImageUrl);
+
+  if (!updatedUser) {
+    throwError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      ERROR_CODES.INTERNAL_ERROR,
+      "Failed to update profile image",
+    );
+  };
 
   sendSuccess(
     res,
@@ -886,7 +896,8 @@ module.exports.updateProfileImage = expressAsyncHandler(async (req, res) => {
 
 // get user details
 module.exports.getUserDetails = expressAsyncHandler(async (req, res) => {
-  const user = await getPublicProfile(req.userId);
+
+  const user = await getPublicProfile(req.user.userId);
 
   if (!user) {
     throwError(
@@ -896,42 +907,16 @@ module.exports.getUserDetails = expressAsyncHandler(async (req, res) => {
     );
   }
 
-  if (user.isBannedUser || user.isBlockUser) {
-    throwError(
-      HTTP_STATUS.BAD_REQUEST,
-      ERROR_CODES.VALIDATION_ERROR,
-      "User is banned or blocked",
-    );
-  }
-
   sendSuccess(res, HTTP_STATUS.OK, "User details fetched successfully", user);
 });
 
 // update user general details
 module.exports.updateUserGeneralDetails = expressAsyncHandler(
   async (req, res) => {
-    const userId = req?.userId;
-    const { username, userHandle, email, about } = req.body;
-    // Validate input fields
-    if (!username || !userHandle || !email || !about) {
-      throwError(
-        HTTP_STATUS.BAD_REQUEST,
-        ERROR_CODES.VALIDATION_ERROR,
-        "Please provide all required fields",
-      );
-    }
+    const userId = req.user.userId;
+    const { username, userHandle, about } = req.validateBody;
 
-    const emailExists = await checkEmailExists(email, userId);
-    if (emailExists) {
-      throwError(
-        HTTP_STATUS.BAD_REQUEST,
-        ERROR_CODES.VALIDATION_ERROR,
-        "Email already in use",
-      );
-    }
-
-    const userHandleExists = await checkUserHandleExists(userHandle, userId);
-
+    const userHandleExists = await checkUserHandleExists(userId, userHandle);
     if (userHandleExists) {
       throwError(
         HTTP_STATUS.BAD_REQUEST,
@@ -939,46 +924,25 @@ module.exports.updateUserGeneralDetails = expressAsyncHandler(
         "User handle already in use",
       );
     }
-
-    // Find the user by ID
-    const user = await findUserById(req.userId);
-    if (!user) {
+    const updatedUserGeneralDetailsById = await updateUserGeneralDetailsById(userId, {
+      user_name: username,
+      user_handle: userHandle,
+      about: about,
+    });
+    if (!updatedUserGeneralDetailsById) {
       throwError(
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.RESOURCE_NOT_FOUND,
-        "User not found",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        ERROR_CODES.INTERNAL_ERROR,
+        "Failed to update user details",
       );
     }
-    if (user.isBannedUser || user.isBlockUser) {
-      throwError(
-        HTTP_STATUS.FORBIDDEN,
-        ERROR_CODES.ACCESS_DENIED,
-        "User is banned or blocked",
-      );
-    }
-    // Update user details
-    user.user_name = username;
-    user.user_handle = userHandle;
-    user.email = email;
-    user.about = about;
-    await user.save();
-
-    sendSuccess(res, HTTP_STATUS.OK, "User details updated successfully", user);
+    sendSuccess(res, HTTP_STATUS.OK, "User details updated successfully");
   },
 );
 // update user contact details
 module.exports.updateUserContactDetails = expressAsyncHandler(
   async (req, res) => {
     const { phone, email } = req.body;
-
-    // Validate input fields
-    if (!email || !phone) {
-      throwError(
-        HTTP_STATUS.BAD_REQUEST,
-        ERROR_CODES.VALIDATION_ERROR,
-        "Please provide all required fields",
-      );
-    }
 
     const emailExists = await checkEmailExists(email, req.userId);
 
@@ -990,29 +954,23 @@ module.exports.updateUserContactDetails = expressAsyncHandler(
       );
     }
 
-    // Find the user by ID
-    const user = await findUserById(req.userId);
-    if (!user) {
-      throwError(
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.RESOURCE_NOT_FOUND,
-        "User not found",
-      );
-    }
+    const updatedUserContactDetailsById = await updateUserContactDetailsById(req.user.userId, {
+      contact_detail: {
+        email_id: email,
+        phone_no: phone,
+      },
+    });
+    
+    if (!updatedUserContactDetailsById) {
 
-    if (user.isBannedUser || user.isBlockUser) {
       throwError(
-        HTTP_STATUS.FORBIDDEN,
-        ERROR_CODES.ACCESS_DENIED,
-        "User is banned or blocked",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        ERROR_CODES.INTERNAL_ERROR,
+        "Failed to update user contact details",
       );
     }
-    // Update user details
-    user.contact_detail.email_id = email;
-    user.contact_detail.phone_no = phone;
-    await user.save();
     // Respond with success
-    sendSuccess(res, HTTP_STATUS.OK, "User contact updated successfully", user);
+    sendSuccess(res, HTTP_STATUS.OK, "User contact updated successfully");
   },
 );
 
@@ -1060,16 +1018,7 @@ module.exports.updateUserProfessionalDetails = expressAsyncHandler(
 
 // update user password
 module.exports.updateUserPassword = expressAsyncHandler(async (req, res) => {
-  const { old_password, new_password, userId } = req.body;
-
-  // Check if both old and new passwords are provided
-  if (!old_password || !new_password || !userId) {
-    throwError(
-      HTTP_STATUS.BAD_REQUEST,
-      ERROR_CODES.VALIDATION_ERROR,
-      "Please provide all required fields",
-    );
-  }
+  const { old_password, new_password } = req.validateBody;
 
   // Check if the new password is long enough
   if (new_password.length < 6) {
@@ -1081,7 +1030,7 @@ module.exports.updateUserPassword = expressAsyncHandler(async (req, res) => {
   }
 
   // Find the user by ID
-  const user = await findUserById(userId);
+  const user = await findUserById(req.user.userId);
   if (!user) {
     throwError(
       HTTP_STATUS.NOT_FOUND,
@@ -1117,12 +1066,15 @@ module.exports.updateUserPassword = expressAsyncHandler(async (req, res) => {
       "Same as old password",
     );
   }
+  const updatedUserPassword = await updateUserPasswordById(user._id, new_password);
 
-  const newHashedPassword = await generateHashPassword(new_password);
+  if (!updatedUserPassword) {
+    throwError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      ERROR_CODES.INTERNAL_ERROR,
+      "Failed to update password",
+    );
+  }
 
-  // Update the user's password
-  user.password = newHashedPassword;
-  await user.save();
-
-  sendSuccess(res, HTTP_STATUS.OK, "Password updated successfully", user);
+  sendSuccess(res, HTTP_STATUS.OK, "Password updated successfully");
 });
