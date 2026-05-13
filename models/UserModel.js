@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
             message: '{VALUE} is not a valid email',
             isAsync: false,
         },
+        index: true,
     },
     password: {
         type: String,
@@ -75,6 +76,14 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    otpLastSentAt: {
+        type: Date,
+        default: null,
+    },
+    otpAttempts: {
+        type: Number,
+        default: 0,
+    },
     created_at: {
         type: Date,
         default: Date.now,
@@ -87,11 +96,16 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
-    verificationToken: {
-        type: String,
-        default: null,
+    refreshToken: {
+        hashedRefreshToken: {
+            type: String,
+            default: null,
+        },
+        jti: {
+            type: String,
+            default: null,
+        },
     },
-    refreshToken: { type: String, default: null },
     fcmToken: { type: String, default: null },
     articles: {
         type: [Number],

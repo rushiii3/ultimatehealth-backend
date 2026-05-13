@@ -1,7 +1,16 @@
+const { HTTP_STATUS, ERROR_CODES } = require("../../constants/errorConstants");
 const Article = require("../../models/Articles");
+const { throwError } = require("../../utils/throwError");
 
 const findArticleById = async (articleId) => {
-  return await Article.findById(Number(articleId));
+    if (!Number.isSafeInteger(articleId) || articleId <= 0) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.INVALID_INPUT,
+      "Article ID must be a positive integer within safe range"
+    );
+  }
+  return Article.findById(Number(articleId)).lean();
 }
 
 const getArticleContributors = async (articleId) => {

@@ -10,6 +10,9 @@ const {sendArticleFeedbackEmail}= require('./controllers/emailservice');
 const EditRequest = require('./models/admin/articleEditRequestModel');
 const Podcast = require('./models/Podcast');
 const statusEnum = require("./utils/StatusEnum");
+const mongoSanitize = require('express-mongo-sanitize');
+const { xss } = require('express-xss-sanitizer');
+const helmet = require('helmet');
 const assetLinks = require('./assetlink.json');
 
 const Article = require('./models/Articles');
@@ -48,6 +51,7 @@ const {verifyRefreshToken } = require("./services/security/tokenService");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const { errorHandler } = require('./middleware/errorHandler');
+const { globalLimiter } = require('./middleware/ratelimit');
 
 const app = express();
 dotenv.config();
@@ -60,8 +64,14 @@ app.use(express.static('public'));
 app.use(cookieParser()); // Parse cookies
 app.use(compression()); // Compress response bodies
 app.use(express.json()); // Parse incoming JSON requests
-//app.use(express.json()); // for parsing application/json
-app.use(express.urlencoded({ extended: true }))
+app.use(express.urlencoded({ extended: true }));
+app.use(mongoSanitize());
+app.use(xss());
+app.use(helmet({
+    
+}));
+app.set('trust proxy', 1);
+app.use(globalLimiter); // Apply global rate limiter
 app.use(cors({
     origin: ["http://uhsocial.in", "https://uhsocial.in"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -95,6 +105,9 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(null, {
   }
 }));
 */
+
+
+
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
@@ -1367,5 +1380,5 @@ io.on('connection', (socket) => {
 
 // Uncomment when v2 is going to live
 // Error handling middleware
-// app.use(errorHandler);
+app.use(errorHandler);
 module.exports = app;

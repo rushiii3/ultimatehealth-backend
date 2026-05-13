@@ -5,6 +5,12 @@ const blackListToken = async (token) => {
     await blacklistedToken.save();
 }
 
+const addTokenToBlacklist = async (jti, expiresAt) => {
+  const blacklistedToken = new BlacklistedToken({ jti, expiresAt });
+  await blacklistedToken.save();
+}
+
 module.exports = {
-    blackListToken
+    blackListToken,
+    addTokenToBlacklist
 }
