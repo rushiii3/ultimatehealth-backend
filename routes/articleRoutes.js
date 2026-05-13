@@ -347,6 +347,21 @@ router.delete('/articles/tags/:id', adminAuthenticateToken, articleController.de
  *               language:
  *                 type: string
  *                 description: The language of the article. (e.g., "en-IN" for English, "hi-IN" for Hindi, "ta-IN" for tamil, "bn-IN" for bengali etc.)
+ *               isTranslation:
+ *                 type: boolean
+ *                 description: Whether this article is a translated version of another article.
+ *               sourceArticleId:
+ *                 type: integer
+ *                 description: The source article ID when creating a translation.
+ *               sourceArticleRecordId:
+ *                 type: string
+ *                 description: The Pocketbase record ID of the source article when creating a translation.
+ *               sourceLanguage:
+ *                 type: string
+ *                 description: The source article language when creating a translation.
+ *               translationOf:
+ *                 type: integer
+ *                 description: Alias for sourceArticleId when creating a translation.
  *               imageUtils:
  *                 type: array
  *                 items:
@@ -499,6 +514,49 @@ router.post('/articles',authenticateToken, articleController.createArticle);
  */
 
 router.get('/articles', articleController.getAllArticles); // auth removed for guest profile, purpose: user can view articles in unauthenticated state
+
+/**
+ * @openapi
+ * /articles/{id}/translations:
+ *   get:
+ *     summary: Get published translations for an article
+ *     description: >
+ *       Returns published translated article records linked to the source article.
+ *       Each translation is a separate article with its own content, metadata, and review lifecycle.
+ *     tags:
+ *       - Articles
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The source article ID.
+ *       - in: query
+ *         name: language
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Optional target language filter, such as "hi-IN".
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved article translations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 translations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     $ref: '#/components/schemas/Article'
+ *       '404':
+ *         description: Source article not found or removed
+ *       '500':
+ *         description: Internal server error
+ */
+router.get('/articles/:id/translations', articleController.getArticleTranslations);
 
 /**
  * @openapi
