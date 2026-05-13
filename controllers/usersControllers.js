@@ -1057,29 +1057,27 @@ module.exports.updateUserPassword = expressAsyncHandler(async (req, res) => {
     );
   }
 
-      // Ensure the new password is not the same as the old password
-      const isSameAsOldPassword = await bcrypt.compare(
-        new_password,
-        user.password
-      );
-      if (isSameAsOldPassword) {
-        return res.status(400).json({ error: "Same as old password" });
-      }
-
-      // Hash the new password
-      const salt = await bcrypt.genSalt(10);
-      const newHashedPassword = await bcrypt.hash(new_password, salt);
-
-      // Update the user's password
-      user.password = newHashedPassword;
-      await user.save();
-      res.json({ status: true, message: "Password updated" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Server error" });
-    }
+  // Ensure the new password is not the same as the old password
+  const isSameAsOldPassword = await isSamePassword(new_password, user.password);
+  if (isSameAsOldPassword) {
+    throwError(
+      HTTP_STATUS.BAD_REQUEST,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Same as old password",
+    );
   }
-);
+  const updatedUserPassword = await updateUserPasswordById(user._id, new_password);
+
+  if (!updatedUserPassword) {
+    throwError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      ERROR_CODES.INTERNAL_ERROR,
+      "Failed to update password",
+    );
+  }
+
+  sendSuccess(res, HTTP_STATUS.OK, "Password updated successfully");
+});
 
 // update notification preferences
 module.exports.updateNotificationPreferences = expressAsyncHandler(
