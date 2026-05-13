@@ -57,13 +57,23 @@ const app = express();
 dotenv.config();
 db.dbConnect();
 
+// Prevent process crash on unhandled errors
+process.on('uncaughtException', (err) => {
+    console.error('CRITICAL: Uncaught Exception:', err);
+    // In production, you might want to gracefully shutdown or notify a service
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const port = process.env.PORT || 8080;
 const url = process.env.PROD_URL;
 app.use(express.static('public'));
 
-app.use(cookieParser()); // Parse cookies
-app.use(compression()); // Compress response bodies
-app.use(express.json()); // Parse incoming JSON requests
+app.use(cookieParser()); 
+app.use(compression()); 
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(mongoSanitize());
 app.use(xss());
@@ -855,13 +865,15 @@ io.on('connection', (socket) => {
                         );
 
                         // Real-time notification to comment owner
-                        io.to(`user:${populatedComment.userId._id}`).emit('notification', {
-                            type: 'commentLike',
-                            title: 'Comment Liked',
-                            message: `${user.user_handle} liked your comment`,
-                            articleId: articleId,
-                            commentId: populatedComment._id
-                        });
+                        if (populatedComment.userId && populatedComment.userId._id) {
+                            io.to(`user:${populatedComment.userId._id}`).emit('notification', {
+                                type: 'commentLike',
+                                title: 'Comment Liked',
+                                message: `${user.user_handle} liked your comment`,
+                                articleId: articleId,
+                                commentId: populatedComment._id
+                            });
+                        }
                     } else if (podcastId) {
 
                         sendCommentLikeNotification(
@@ -875,13 +887,15 @@ io.on('connection', (socket) => {
                         );
 
                         // Real-time notification to comment owner
-                        io.to(`user:${populatedComment.userId._id}`).emit('notification', {
-                            type: 'commentLike',
-                            title: 'Comment Liked',
-                            message: `${user.user_handle} liked your comment`,
-                            podcastId: podcastId,
-                            commentId: populatedComment._id
-                        });
+                        if (populatedComment.userId && populatedComment.userId._id) {
+                            io.to(`user:${populatedComment.userId._id}`).emit('notification', {
+                                type: 'commentLike',
+                                title: 'Comment Liked',
+                                message: `${user.user_handle} liked your comment`,
+                                podcastId: podcastId,
+                                commentId: populatedComment._id
+                            });
+                        }
                     }
 
                 }
@@ -1025,6 +1039,11 @@ io.on('connection', (socket) => {
                         return;
                     }
 
+                    if (!article.authorId) {
+                        socket.emit('error', { message: 'Article author is blocked or banned' });
+                        return;
+                    }
+
                     if (article.reviewer_id.toString() !== reviewer._id.toString()) {
                         socket.emit('error', { message: 'You are not authorized to access this article' });
                         return;
@@ -1133,6 +1152,11 @@ io.on('connection', (socket) => {
 
                     if (!editRequest || !reviewer) {
                         socket.emit('error', { message: 'Request or Moderator not found' });
+                        return;
+                    }
+
+                    if (!editRequest.user_id || !editRequest.article) {
+                        socket.emit('error', { message: 'Edit request user or article not found' });
                         return;
                     }
 

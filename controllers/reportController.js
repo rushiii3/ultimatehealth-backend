@@ -9,23 +9,7 @@ const User = require("../models/UserModel");
 const Comment = require('../models/commentSchema');
 const Admin = require('../models/admin/adminModel');
 const AdminAggregate = require('../models/events/adminContributionEvent');
-const {
-  sendReportUndertakenEmail,
-  sendResolvedMailToVictim,
-  sendResolvedMailToConvict,
-  sendWarningMailToVictimOnReportDismissOrIgnore,
-  sendDismissedOrIgnoreMailToConvict,
-  sendInitialReportMailtoConvict,
-  sendInitialReportMailtoVictim,
-  sendWarningMailToConvict,
-  sendRemoveContentMailToConvict,
-  sendBlockConvictMail,
-  sendBannedUserMail,
-  sendRestoreContentMailToUser,
-  sendUnblockUserMail,
-  sendRestoreRequestDisapprovedMail,
-  sendRestoreRequestReceivedMail
-} = require('./emailservice');
+const reportService = require('../services/db/reportService');
 const cron = require('node-cron');
 
 
@@ -482,7 +466,7 @@ module.exports.getReportDetails = expressAsyncHandler(
 )
 
 /** Pick report or assign moderator */
-module.exports.pickReport = expressAsyncHandler(
+module.exports.adminAction = expressAsyncHandler(
   async (req, res) => {
     const { reportId } = req.body;
 
@@ -491,38 +475,17 @@ module.exports.pickReport = expressAsyncHandler(
     }
 
     try {
-
-      const report = await ReportAction.findById(reportId).populate({
-        path: 'reportedBy',
-        select: 'user_name, email',
-      })
-        .populate({
-          path: 'reasonId',
-          select: 'reason',
-        })
-        .exec();
-      if (!report) {
-        return res.status(404).json({ message: 'Report not found' });
-      }
-      report.admin_id = req.userId;
-      report.action_taken = reportActionEnum.INVESTIGATION;
-      report.last_action_date = new Date();
-
-      await report.save();
-
-      /** Send Mail to user */
-      sendReportUndertakenEmail(report.reportedBy.email, report._id);
+      await reportService.adminAction(reportId, req.userId);
       return res.status(200).json({ message: 'Report picked successfully' });
-
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: 'Error picking report' });
+      res.status(500).json({ message: err.message || 'Error picking report' });
     }
   }
 )
 
 /** Take action */
-module.exports.takeAdminActionOnReport = expressAsyncHandler(
+module.exports.adminTakeAction = expressAsyncHandler(
   async (req, res) => {
     const { reportId, action, admin_id, dismissReason } = req.body;
 
@@ -530,357 +493,13 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
       return res.status(400).json({ message: 'Missing required field: Report id, action and admin id' });
     }
 
-    if (action.toString() === reportActionEnum.DISMISSED && !dismissReason) {
-      return res.status(400).json({ message: 'Dismiss reason is required' });
-    }
-
     try {
-      const [report, admin] = await Promise.all([
-        ReportAction.findById(reportId).populate({
-          path: 'reasonId',
-          select: 'reason',
-        }).populate({
-          path: 'articleId',
-          select: 'title status pb_recordId authorId',
-        })
-          .populate({
-            path: "podcastId",
-            select: "title status user_id"
-          })
-          .populate({
-            path: 'commentId',
-            select: 'content',
-          })
-          .exec(),
-        Admin.findById(admin_id)
-      ]);
-
-      if (!report || !admin) {
-        return res.status(404).json({ message: 'Report or moderator not found' });
-      }
-
-
-
-      /*
-      if (report.admin_id !== null && report.admin_id !== admin._id) {
-        return res.status(403).json({ message: 'Report already picked by another moderator' });
-      }
-        */
-
-      if (
-        report.action_taken === reportActionEnum.RESOLVED ||
-        report.action_taken === reportActionEnum.DISMISSED ||
-        report.action_taken === reportActionEnum.IGNORE ||
-        report.action_taken === reportActionEnum.WARN_CONVICT ||
-        report.action_taken === reportActionEnum.REMOVE_CONTENT ||
-        report.action_taken === reportActionEnum.BLOCK_CONVICT
-
-      ) {
-
-        return res.status(400).json({
-          success: false,
-          message: `This report (Issue No. ${report.id}) has already been resolved with status: ${report.action_taken}.`,
-        });
-      }
-
-      const [convict, victim] = await Promise.all([
-        User.findById(report.convictId),
-        User.findById(report.reportedBy)
-      ]);
-
-      if (!convict || !victim) {
-        return res.status(404).json({ message: 'Convict or victim not found' });
-      }
-
-      if (convict.isBlockUser || victim.isBlockUser) {
-        // Ignore Report
-        report.action_taken = reportActionEnum.IGNORE;
-        convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-        report.last_action_date = new Date();
-        await report.save();
-        await convict.save();
-
-
-        return res.status(403).json({ message: 'Convict or victim is blocked' });
-      }
-
-      if (convict.isBannedUser || victim.isBannedUser) {
-        // Ignore Report
-        report.action_taken = reportActionEnum.IGNORE;
-        report.last_action_date = new Date();
-        await report.save();
-        await convict.save();
-        return res.status(403).json({ message: 'Convict or victim is banned' });
-
-      }
-
-      const details = {
-        podcastId: report.podcastId ? report.podcastId._id : null,
-        articleId: report.articleId ? report.articleId._id : null,
-        content: report.commentId ? report.commentId.content : report.articleId ? report.articleId.title : report.podcastId ? report.podcastId.title : null,
-        commentId: report.commentId ? report.commentId._id : null,
-      }
-      const reportType = report.commentId ? 'comment' : 'content';
-      switch (action.toString()) {
-
-        case reportActionEnum.RESOLVED: {
-          report.action_taken = reportActionEnum.RESOLVED;
-          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-
-          report.last_action_date = new Date();
-          await report.save();
-          await convict.save();
-          // Increase moderator contribution count
-          const aggregate = new AdminAggregate({
-            userId: admin._id,
-            contributionType: 3,
-          });
-
-          await aggregate.save();
-          // Send resolved mail to convict and victim
-          await sendResolvedMailToConvict(convict.email, details, reportType);
-          await sendResolvedMailToVictim(victim.email, details, reportType, action);
-
-          break;
-        }
-
-        case reportActionEnum.DISMISSED: {
-
-          report.action_taken = reportActionEnum.DISMISSED;
-          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-
-          victim.reportFeatureMisuse = victim.reportFeatureMisuse + 1;
-
-          // If the victim has reported feature misuse 3 times, block them
-          if (victim.reportFeatureMisuse >= 3) {
-            victim.isBlockUser = true;
-            victim.blockedAt = new Date();
-          }
-          await victim.save();
-          report.last_action_date = new Date();
-          await report.save();
-          await convict.save();
-
-          await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, dismissReason, Math.max(victim.reportFeatureMisuse - 1, 0));
-          await sendDismissedOrIgnoreMailToConvict(convict.email, details, reportType);
-          // Increase moderator contribution count
-          const aggregate = new AdminAggregate({
-            userId: admin._id,
-            contributionType: 3,
-          });
-
-          await aggregate.save();
-
-          break;
-        }
-
-        case reportActionEnum.IGNORE: {
-
-          report.action_taken = reportActionEnum.IGNORE;
-          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-          report.last_action_date = new Date();
-          await report.save();
-
-          await convict.save();
-
-          break;
-        }
-
-        case reportActionEnum.WARN_CONVICT: {
-
-          report.action_taken = reportActionEnum.WARN_CONVICT;
-
-          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-          convict.strikeCount = convict.strikeCount + 1;
-
-          if (convict.strikeCount >= 3) {
-            // ban the user
-            convict.isBannedUser = true;
-          }
-          report.last_action_date = new Date();
-          // For warning will not decrease report count
-          await convict.save();
-          await report.save();
-
-
-          // Remove that content
-          if (report.commentId) {
-            // Remove comment
-            const comment = await Comment.findById(report.commentId._id);
-            comment.is_removed = true;
-
-            await comment.save();
-          } else if (report.articleId) {
-            // Remove post
-            const art = await Article.findById(report.articleId._id);
-            art.is_removed = true;
-            art.reportId = report._id;
-            await art.save();
-            // after removing the content aware user, and also make a section where
-            // users can view their removed contents with reasons and they can request for restore
-          } else if (report.podcastId) {
-
-            const p = await Podcast.findById(report.podcastId._id);
-            p.is_removed = true;
-            p.reportId = report._id;
-
-            await p.save();
-          }
-
-          // send warn mail to convict, and resolve mail to victim 
-          sendWarningMailToConvict(convict.email, details, reportType, report.reasonId.reason, Math.max(0, convict.strikeCount));
-          sendResolvedMailToVictim(victim.email, details, reportType, action);
-          // Increase admin contribution count
-          const aggregate = new AdminAggregate({
-            userId: admin._id,
-            contributionType: 3,
-          });
-
-          await aggregate.save();
-          break;
-        }
-        case reportActionEnum.REMOVE_CONTENT: {
-          report.action_taken = reportActionEnum.REMOVE_CONTENT;
-
-          // Remove that content
-          if (report.commentId) {
-            // Remove comment
-            const comment = await Comment.findById(report.commentId._id);
-            comment.is_removed = true;
-            await comment.save();
-
-          } else if (report.articleId) {
-            // Remove post
-            const art = await Article.findById(report.articleId._id);
-            art.is_removed = true;
-            art.reportId = report._id;
-            await art.save();
-          }
-          else if (report.podcastId) {
-
-            const p = await Podcast.findById(report.podcastId._id);
-            p.is_removed = true;
-            p.reportId = report._id;
-            await p.save();
-
-          }
-          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-          report.last_action_date = new Date();
-          await report.save();
-          await convict.save();
-
-          // warn convict
-          sendRemoveContentMailToConvict(convict.email, details, reportType, report.reasonId.reason);
-          // send resolve mail to admin
-          sendResolvedMailToVictim(victim.email, details, reportType, action);
-
-          // increase moderator contribution count
-          const aggregate = new AdminAggregate({
-            userId: admin._id,
-            contributionType: 3,
-          });
-
-          await aggregate.save();
-          break;
-        }
-
-        case reportActionEnum.BLOCK_CONVICT: {
-
-          report.action_taken = reportActionEnum.BLOCK_CONVICT;
-          convict.activeReportCount = Math.max(0, convict.activeReportCount + 1);
-          convict.isBlockUser = true;
-          convict.blockedAt = new Date(); // Temporary block for 1 month
-          report.last_action_date = new Date();
-          await report.save();
-          await convict.save();
-
-          // Increase moderator contribution count
-          const aggregate = new AdminAggregate({
-            userId: admin._id,
-            contributionType: 3,
-          });
-
-          // Send mail to convict and victim
-          await aggregate.save();
-          await sendBlockConvictMail(convict.email, details, reportType, report.reasonId.reason);
-          await sendResolvedMailToVictim(victim.email, details, reportType, action);
-          break;
-        }
-        case reportActionEnum.RESTORE_CONTENT: {
-
-          report.action_taken = reportActionEnum.RESTORE_CONTENT;
-          // Restore post
-
-          if (report.articleId) {
-
-            const art = await Article.findById(report.articleId._id);
-            art.is_removed = false;
-            art.reportId = null;
-            await art.save();
-
-          } else if (report.podcastId) {
-            const p = await Podcast.findById(report.podcastId._id);
-            p.is_removed = false;
-            p.reportId = null;
-            await p.save();
-          }
-
-          report.last_action_date = new Date();
-          await report.save();
-          await convict.save();
-
-          // warn convict
-          await sendRestoreContentMailToUser(convict.email, report.articleId.title);
-          break;
-        }
-        case reportActionEnum.BAN_CONVICT: {
-
-          report.action_taken = reportActionEnum.BAN_CONVICT;
-          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-          convict.isBannedUser = true; // Permanent banned account
-          report.last_action_date = new Date();
-          await report.save();
-          await convict.save();
-
-          // Increase moderator contribution count
-          const aggregate = new AdminAggregate({
-            userId: admin._id,
-            contributionType: 3,
-          });
-
-          // Send mail to convict and victim
-          await aggregate.save();
-          // Send Ban convict mail 
-          await sendBannedUserMail(convict.email, details, reportType, report.reasonId.reason);
-          // await sendBlockConvictMail(convict.email, details, reportType, report.reasonId.reason);
-          await sendResolvedMailToVictim(victim.email, details, reportType, action);
-          break;
-        }
-        case reportActionEnum.CONVICT_REQUEST_DISAPPROVED: {
-          report.last_action_date = new Date();
-          await report.save();
-          await sendRestoreRequestDisapprovedMail(convict.email, report.articleId.title);
-          break;
-        }
-        default: {
-          return res.status(400).json({ message: "Invalid action" });
-        }
-      }
-
-      if (convict.activeReportCount < 3 && convict.isBlockUser && action.toString() !== reportActionEnum.BLOCK_CONVICT) {
-        convict.isBlockUser = false;
-        convict.blockedAt = null;
-        await convict.save();
-        await sendUnblockUserMail(convict.email, convict.user_name);
-      }
-
+      await reportService.adminTakeAction({ reportId, action, adminId: admin_id, dismissReason });
       return res.status(200).json({ message: "Action performed" });
-
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: 'Error taking action on report' });
+      res.status(400).json({ message: err.message || 'Error taking action on report' });
     }
-
   }
 )
 

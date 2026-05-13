@@ -19,9 +19,9 @@ router.get('/report/all-assigned-reports', adminAuthenticateToken, controller.ge
 
 router.get('/report-details/:id', adminAuthenticateToken, controller.getReportDetails);
 
-router.post('/report/pick-report-for-investigation', adminAuthenticateToken, controller.pickReport);
+router.post('/report/pick-report-for-investigation', adminAuthenticateToken, controller.adminAction);
 
-router.post('/report/take-admin-action', adminAuthenticateToken, controller.takeAdminActionOnReport);
+router.post('/report/take-admin-action', adminAuthenticateToken, controller.adminTakeAction);
 
 router.post('/report/convict-request-against-report', authenticateToken, controller.convictRequestToRestoreContent);
 

@@ -159,7 +159,7 @@ const approvePodcast = expressAsyncHandler(
                 return res.status(404).json({ message: "Podcast or admin not found" });
             }
 
-            if (podcast.admin_id.toString() !== adminUser._id.toString()) {
+            if (!podcast.admin_id || podcast.admin_id.toString() !== adminUser._id.toString()) {
                 return res.status(400).json({ message: "You are not the admin of this podcast " });
             }
 
@@ -174,6 +174,10 @@ const approvePodcast = expressAsyncHandler(
                 contributionType: 4
             });
             await adminAggregate.save();
+
+            if (!podcast.user_id) {
+                return res.status(404).json({ message: "Podcast author not found" });
+            }
 
             // Increase user contribution
             await updateUserContribution(podcast.user_id._id);
@@ -221,7 +225,7 @@ const discardPodcast = expressAsyncHandler(
                 return res.status(404).json({ message: "Podcast or admin not found" });
             }
 
-            if (podcast.admin_id.toString() !== adminUser._id.toString()) {
+            if (!podcast.admin_id || podcast.admin_id.toString() !== adminUser._id.toString()) {
                 return res.status(400).json({ message: "You are not the admin of this podcast " });
             }
 
@@ -252,15 +256,16 @@ const discardPodcast = expressAsyncHandler(
 
             // send mail
 
-            await podcastReviewNotificationsToUser(
-                podcast.user_id._id,
-                podcast._id,
-                "Podcast discarded",
-                "Your podcast with title " + podcast.title + " has been discarded by admin"
-            );
+            if (podcast.user_id) {
+                await podcastReviewNotificationsToUser(
+                    podcast.user_id._id,
+                    podcast._id,
+                    "Podcast discarded",
+                    "Your podcast with title " + podcast.title + " has been discarded by admin"
+                );
 
-
-            sendPodcastDiscardEmail(podcast.user_id.email, podcast.status, podcast.title, discardReason);
+                sendPodcastDiscardEmail(podcast.user_id.email, podcast.status, podcast.title, discardReason);
+            }
             return res.status(200).json({ message: "Podcast discarded successfully" });
 
         } catch (err) {

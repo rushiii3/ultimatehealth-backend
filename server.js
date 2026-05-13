@@ -131,7 +131,7 @@ io.on('connection', (socket) => {
                 // Now emit event
 
                 if (parentCommentId) {
-                    const parentComment = Comment.findById(parentCommentId);
+                    const parentComment = await Comment.findById(parentCommentId);
 
                     if (!parentComment) {
                         socket.emit('error', { message: 'Parent comment not found' });

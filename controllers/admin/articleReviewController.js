@@ -38,7 +38,7 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
                 .limit(Number(limit))
                 .exec();
 
-            articles = articles.filter(r => r.article?.authorId !== null);
+            articles = articles.filter(r => r.authorId !== null);
             if (Number(page) === 1) {
                 const totalArticles = await Article.countDocuments({
                     status: statusEnum.statusEnum.UNASSIGNED,
@@ -86,7 +86,7 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
                 .limit(Number(limit))
                 .exec();
 
-            articles = articles.filter(r => r.article?.authorId !== null);
+            articles = articles.filter(r => r.authorId !== null);
 
             if (Number(page) === 1) {
                 const totalArticles = await Article.countDocuments({
@@ -255,7 +255,7 @@ module.exports.submitReview = expressAsyncHandler(
             const comment = new Comment({
                 adminId: reviewer._id,
                 articleId: article._id,
-                parentCommentId: parentCommentId || null,
+                parentCommentId: null,
                 content: feedback,
                 isReview: true
             });
@@ -388,7 +388,6 @@ module.exports.publishArticle = expressAsyncHandler(
 
             if (article.authorId === null) {
                 return res.status(404).json({ message: "Article author either block or banned" });
-                return;
             }
 
             /*
@@ -653,7 +652,7 @@ async function discardArticle() {
                     "Your article with title " + article.title + " has been discarded by system"
                 );
 
-                sendArticleDiscardEmail(article.authorId.email, previousStatus, article.title, "");
+                sendArticleDiscardEmail(article.authorId.email, article.status, article.title, "");
             }
 
 

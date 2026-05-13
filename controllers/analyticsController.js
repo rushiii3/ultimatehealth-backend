@@ -67,8 +67,7 @@ module.exports.getTotalWriteCountOfUser = expressAsyncHandler(
         progress
       });
     } catch (err) {
-
-      console.log('Total Reads Error', err);
+      console.log('Total Writes Error', err);
       res.status(500).json({ message: 'Internal server error' });
     }
   }
@@ -128,7 +127,11 @@ module.exports.getMostViewedArticles = expressAsyncHandler(
         .select('imageUtils title viewUsers lastUpdated')
         .exec();
 
-      const sortedArticles = user.articles.sort((a, b) => b.viewUsers.length - a.viewUsers.length);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const sortedArticles = (user.articles || []).sort((a, b) => (b.viewUsers?.length || 0) - (a.viewUsers?.length || 0));
 
       // Limit to top 5 articles
       const topArticles = sortedArticles.slice(0, 5);
@@ -160,16 +163,14 @@ exports.getDailyReadDataForGraphs = expressAsyncHandler(
       const validDays = [0, 1, 2, 3, 4, 5, 6]; // Sunday to Saturday
 
       if (validDays.includes(dayIndex)) {
-        const weeklyData = [];
+        const aggregates = await ReadAggregate.find({
+          userId,
+          date: { $gte: monthStart, $lte: monthEnd }
+        });
 
-        for (let date = monthStart; date <= monthEnd; date.setDate(date.getDate() + 1)) {
-          if (date.getDay() === dayIndex) {
-            const dailyData = await ReadAggregate.find({ userId, date: new Date(date) });
-            if (dailyData.length > 0) {
-              weeklyData.push(dailyData[0].dailyReads); // Collect reads for that day
-            }
-          }
-        }
+        const weeklyData = aggregates
+          .filter(entry => entry.date.getDay() === dayIndex)
+          .map(entry => entry.dailyReads);
 
         const totalDays = weeklyData.length;
         const totalReads = weeklyData.reduce((total, count) => total + count, 0);
@@ -321,16 +322,14 @@ exports.getDailyWriteDataForGraphs = expressAsyncHandler(
       const validDays = [0, 1, 2, 3, 4, 5, 6]; // Sunday to Saturday
 
       if (validDays.includes(dayIndex)) {
-        const weeklyData = [];
+        const aggregates = await WriteAggregate.find({
+          userId,
+          date: { $gte: monthStart, $lte: monthEnd }
+        });
 
-        for (let date = monthStart; date <= monthEnd; date.setDate(date.getDate() + 1)) {
-          if (date.getDay() === dayIndex) {
-            const dailyData = await WriteAggregate.find({ userId, date: new Date(date) });
-            if (dailyData.length > 0) {
-              weeklyData.push(dailyData[0].dailyWrites); // Collect reads for that day
-            }
-          }
-        }
+        const weeklyData = aggregates
+          .filter(entry => entry.date.getDay() === dayIndex)
+          .map(entry => entry.dailyWrites);
 
         const totalDays = weeklyData.length;
         const totalWrites = weeklyData.reduce((total, count) => total + count, 0);

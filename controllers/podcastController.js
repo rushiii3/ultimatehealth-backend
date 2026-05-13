@@ -47,8 +47,9 @@ const getPodcastProfile = expressAsyncHandler(
                 });
 
             // filter all standalonepodcast and playlists
-            const playListPodcastIds =
-                allPlaylists.map((playlist) => playlist.podcasts.map(p => p._id.toString()));
+            const playListPodcastIds = new Set(
+                allPlaylists.flatMap((playlist) => playlist.podcasts.map(p => p._id.toString()))
+            );
 
             const standalonepodcast = allPodcasts.filter((podcast) => !playListPodcastIds.has(podcast._id.toString()));
 
@@ -416,7 +417,7 @@ const savePodcast = expressAsyncHandler(
             }
             else {
 
-                Podcast.findByIdAndUpdate(podcast_id, {
+                await Podcast.findByIdAndUpdate(podcast_id, {
                     $addToSet: { savedUsers: user._id }
                 });
 
@@ -449,7 +450,7 @@ const likePodcast = expressAsyncHandler(
             }
 
             if (podcast.status !== statusEnum.statusEnum.PUBLISHED) {
-                return res.status(400).json({ message: 'Article is not published' });
+                return res.status(400).json({ message: 'Podcast is not published' });
             }
             // Check if the article is already liked
             const likedUserSet = new Set(podcast.likedUsers.map(u => u.toString()));
@@ -504,7 +505,7 @@ const updatePodcastViewCount = expressAsyncHandler(
             }
 
             if (podcast.status !== statusEnum.statusEnum.PUBLISHED) {
-                return res.status(400).json({ message: 'Article is not published' });
+                return res.status(400).json({ message: 'Podcast is not published' });
             }
 
             // console.log('Podcast view users', podcast.viewUsers[0].toString());
@@ -777,7 +778,7 @@ const getPodcastLikeDataForGraphs = expressAsyncHandler(
             const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
             const yearStart = new Date(today.getFullYear(), 0, 1);
 
-            const dailyData = await AudioLikeAggregate.find({ userId, date: today });
+            const dailyData = await AudioLikeAggregate.findOne({ userId, date: today });
             const monthlyData = await AudioLikeAggregate.find({ userId, date: { $gte: monthStart } });
             const yearlyData = await AudioLikeAggregate.find({ userId, date: { $gte: yearStart } });
 
@@ -814,7 +815,7 @@ const getPodcastViewDataForGraphs = expressAsyncHandler(
             const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
             const yearStart = new Date(today.getFullYear(), 0, 1);
 
-            const dailyData = await AudioViewAggregate.find({ userId, date: today });
+            const dailyData = await AudioViewAggregate.findOne({ userId, date: today });
             const monthlyData = await AudioViewAggregate.find({ userId, date: { $gte: monthStart } });
             const yearlyData = await AudioViewAggregate.find({ userId, date: { $gte: yearStart } });
 

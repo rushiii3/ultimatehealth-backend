@@ -1,4 +1,6 @@
+
 const expressAsyncHandler = require("express-async-handler");
+const User = require("../models/UserModel");
 const {
   createUnverifiedUser,
   findUserById,
@@ -18,9 +20,9 @@ const {
   unfollowUser,
   getUserSocialData,
   getUserArticles,
-  getUserLikeAndSaveArticleData,
-  checkEmailExists,
+  getUserLikeAndSaveArticlesData: getUserLikeAndSaveArticlesData,
   checkUserHandleExists,
+  checkEmailExists,
   clearOtpUser,
   incrementOtpAttemptsUser,
   updateUserPasswordAndClearOtp,
@@ -38,6 +40,7 @@ const {
   checkExistingAdmin,
   clearOtpAdmin,
   incrementOtpAttemptsAdmin,
+  updateAdminPasswordAndClearOtp,
   logoutAdmin
 } = require("../services/db/adminService");
 const { blackListToken, addTokenToBlacklist } = require("../services/db/dbTokenService");
@@ -427,7 +430,7 @@ module.exports.verifyOtpForForgotPassword = expressAsyncHandler(
     if (user) {
       await updateUserPasswordAndClearOtp(account._id,newPassword);
     } else {
-      await updateAdminPasswordAndClearOtp(account._id);
+      await updateAdminPasswordAndClearOtp(account._id, newPassword);
     }
 
     sendSuccess(res, HTTP_STATUS.OK, "Password reset successful");
@@ -475,7 +478,7 @@ module.exports.refreshToken = expressAsyncHandler(async (req, res) => {
   // Verify the refresh token
   const decoded = verifyToken(refreshToken);
 
-  const user = await findUserById(decoded.userId);
+  const user = await User.findById(decoded.userId);
   if (!user) {
     throwError(
       HTTP_STATUS.FORBIDDEN,
@@ -488,12 +491,13 @@ module.exports.refreshToken = expressAsyncHandler(async (req, res) => {
     { userId: user._id, email: user.email, role: "user" },
     "15m",
   );
-  const newRefreshToken = generateAccessToken(
+  const { refreshToken: newRefreshToken, jti } = generateRefreshToken(
     { userId: user._id, email: user.email, role: "user" },
     "7d",
   );
 
-  user.refreshToken = newRefreshToken;
+  const hashedRefreshToken = await hashToken(newRefreshToken);
+  user.refreshToken = { hashedRefreshToken, jti };
   await user.save();
 
   res.cookie("accessToken", newAccessToken, {
@@ -815,7 +819,7 @@ module.exports.getUserWithArticles = expressAsyncHandler(async (req, res) => {
 // get user like and save articles
 module.exports.getUserLikeAndSaveArticles = expressAsyncHandler(
   async (req, res) => {
-    const user = await getUserLikeAndSaveArticleData(req.userId);
+    const user = await getUserLikeAndSaveArticlesData(req.userId);
 
     if (!user) {
       throwError(

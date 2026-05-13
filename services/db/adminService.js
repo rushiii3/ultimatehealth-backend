@@ -1,4 +1,5 @@
 const Admin = require("../../models/admin/adminModel");
+const { generateHashPassword } = require("../security/encryptService");
 
 const checkExistingAdmin = async ({ email }) => {
   const existingAdmin = await Admin.exists({ email: email });
