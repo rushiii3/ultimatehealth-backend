@@ -26,6 +26,7 @@ const readAggregateSchema = new Schema({
         default: 0,
     },
 });
+// each user activity now track as events. based on there events we prepare analytics.
 
 readAggregateSchema.index({ userId: 1, date: 1 });
 
