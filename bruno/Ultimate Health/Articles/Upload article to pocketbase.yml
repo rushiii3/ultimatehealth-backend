@@ -1,0 +1,22 @@
+info:
+  name: Upload article to pocketbase
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/articles/upload"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Introduction to Node.js",
+        "htmlContent": "<h1>Introduction to Node.js</h1><p>Node.js is a JavaScript runtime built on Chrome's V8 engine.</p><h2>Key Features</h2><ul><li>Non-blocking I/O</li><li>Event-driven architecture</li><li>High performance</li></ul>"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

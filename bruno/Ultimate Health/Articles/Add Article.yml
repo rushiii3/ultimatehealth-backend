@@ -1,0 +1,35 @@
+info:
+  name: Add Article
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/articles"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Introduction to Node.js",
+        "authorName": "test",
+        "description": "test test test",
+        "imageUtils": "test",
+        "allow_podcast": true,
+        "article_id": 5,
+        "article_signature": "e990236f1ada50a32b932beca1aebe4c5ced4f29a673c2a54429519d6b339a56",
+        "tags": [
+          {
+            "_id": "6a1967de69a0ec884a0dfec4"
+          },
+          {
+            "_id": "6a2136902ced59864b07dcd5"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

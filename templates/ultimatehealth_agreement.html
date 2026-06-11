@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UltimateHealth – Moderator Agreement</title>
+  <style>
+    /* ── Reset & base ── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.65;
+      color: #1a1a2e;
+      background: #fff;
+    }
+
+    /* ── Page layout for PDF ── */
+    @page {
+      size: A4;
+      margin: 20mm 5mm 20mm 5mm;
+    }
+
+    @media print {
+      .page-break {
+        page-break-before: always;
+      }
+
+      .no-break {
+        page-break-inside: avoid;
+      }
+
+      .signature-section {
+        page-break-inside: avoid;
+      }
+    }
+
+    .document {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 48px 48px;
+    }
+
+    /* ── Header / branding ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 18px;
+      border-bottom: 3px solid #16a34a;
+      margin-bottom: 28px;
+    }
+
+    .logo-mark {
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(135deg, #16a34a 0%, #0ea5e9 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-mark svg {
+      width: 26px;
+      height: 26px;
+      fill: #fff;
+    }
+
+    .brand-name {
+      font-size: 22pt;
+      font-weight: 700;
+      color: #16a34a;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-sub {
+      font-size: 9pt;
+      color: #64748b;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ── Document title ── */
+    .doc-title {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .doc-title h1 {
+      font-size: 17pt;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+    }
+
+    .doc-title .subtitle {
+      font-size: 10pt;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1.5px solid #e2e8f0;
+      margin: 18px 0;
+    }
+
+    /* ── Section headings ── */
+    .section {
+      margin-bottom: 22px;
+    }
+
+    .section-title {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #16a34a;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #dcfce7;
+    }
+
+    /* ── Body text ── */
+    p {
+      margin-bottom: 8px;
+    }
+
+    /* ── Role badge ── */
+    .role-badge {
+      display: inline-block;
+      background: #f0fdf4;
+      border: 1.5px solid #16a34a;
+      color: #15803d;
+      font-weight: 700;
+      font-size: 10pt;
+      border-radius: 6px;
+      padding: 4px 14px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Lists ── */
+    ul,
+    ol {
+      padding-left: 20px;
+      margin-bottom: 8px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* ── Two-column responsibilities ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 20px;
+    }
+
+    .two-col li {
+      margin-bottom: 3px;
+    }
+
+    /* ── Moderation action table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10pt;
+      margin-top: 8px;
+    }
+
+    th {
+      background: #16a34a;
+      color: #fff;
+      text-align: left;
+      padding: 7px 10px;
+      font-weight: 600;
+      font-size: 9.5pt;
+    }
+
+    td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* ── Warning box ── */
+    .warning {
+      background: #fff7ed;
+      border-left: 4px solid #f97316;
+      border-radius: 4px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 10pt;
+      color: #7c2d12;
+    }
+
+    .warning strong {
+      color: #c2410c;
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      background: #f0f9ff;
+      border-left: 4px solid #0ea5e9;
+      border-radius: 4px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 10pt;
+      color: #0c4a6e;
+    }
+
+    /* ── Checklist ── */
+    .checklist li {
+      list-style: none;
+      padding-left: 4px;
+    }
+
+    .checklist li::before {
+      content: "☐ ";
+      color: #16a34a;
+      font-size: 11pt;
+    }
+
+    /* ── Signature block ── */
+    .signature-block {
+      margin-top: 36px;
+      border-top: 2px solid #e2e8f0;
+      padding-top: 24px;
+    }
+
+    .signature-block h2 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .sig-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-top: 8px;
+    }
+
+    .sig-field {
+      border-bottom: 1.5px solid #334155;
+      padding-bottom: 4px;
+      min-height: 44px;
+      position: relative;
+    }
+
+    .sig-label {
+      font-size: 8.5pt;
+      color: #64748b;
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .sig-filled {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #0f172a;
+      padding: 4px 0;
+    }
+
+    .sig-image-box {
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      background: #f8fafc;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+      max-width: 340px;
+    }
+
+    .sig-img {
+      max-height: 64px;
+      max-width: 100%;
+      object-fit: contain;
+    }
+
+    /* ── Footer ── */
+    .doc-footer {
+      margin-top: 32px;
+      padding-top: 14px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 8.5pt;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="document">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14h-2v-5h2zm0-7h-2V7h2z" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">UltimateHealth</div>
+        <div class="brand-sub">Content Review Program</div>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="doc-title">
+      <h1>Review Team Agreement</h1>
+      <div class="subtitle">Moderator &amp; Administrator Terms of Engagement</div>
+    </div>
+    <hr class="divider" />
+
+    <p>Welcome to the UltimateHealth Review Team. Thank you for joining our mission to provide high-quality, verified
+      health content to our community. As an admin or moderator, you play a critical role in maintaining the integrity
+      and quality of content on our platform.</p>
+
+    <!-- Role -->
+    <div class="section no-break" style="margin-top:18px;">
+      <div class="section-title">Assigned Role</div>
+      <div class="role-badge">&#x1F6E1;&#xFE0F; Moderator — Content Review &amp; Moderation</div>
+      <p>You have been assigned the <strong>Moderator</strong> role, which grants content review and moderation
+        capabilities as outlined in this agreement.</p>
+    </div>
+
+    <!-- Responsibilities -->
+    <div class="section no-break">
+      <div class="section-title">Responsibilities</div>
+      <ul class="two-col">
+        <li>Review articles for accuracy, quality, and compliance</li>
+        <li>Provide constructive feedback to authors</li>
+        <li>Publish articles that meet quality standards</li>
+        <li>Discard non-compliant content with explanations</li>
+        <li>Investigate and resolve user reports promptly</li>
+        <li>Take appropriate moderation actions on violations</li>
+        <li>Respond to review requests in a timely manner</li>
+        <li>Maintain professionalism in all communications</li>
+        <li>Ensure fair and unbiased decision-making</li>
+      </ul>
+    </div>
+
+    <!-- Privileges -->
+    <div class="section no-break">
+      <div class="section-title">Privileges &amp; Access</div>
+      <ul>
+        <li>Access to the admin dashboard and review system</li>
+        <li>Ability to self-assign articles for review</li>
+        <li>Authority to publish or discard submitted content</li>
+        <li>Manage and resolve user reports and community violations</li>
+        <li>Take moderation actions (warn, block, ban users; remove/restore content)</li>
+        <li>View analytics and contribution metrics</li>
+        <li>Receive notifications for review requests and updates</li>
+        <li>Single-device authentication for enhanced security</li>
+      </ul>
+    </div>
+
+    <!-- Code of Conduct -->
+    <div class="section no-break">
+      <div class="section-title">Code of Conduct</div>
+      <p>As a member of the review team, you agree to:</p>
+      <ul>
+        <li><strong>Maintain Confidentiality</strong> — Protect user information and unpublished content.</li>
+        <li><strong>Act with Integrity</strong> — Make unbiased decisions based on content quality and guidelines.</li>
+        <li><strong>Fair Moderation</strong> — Apply actions consistently without bias or favoritism.</li>
+        <li><strong>Respect Users</strong> — Provide respectful, constructive feedback to all community members.</li>
+        <li><strong>Follow Guidelines</strong> — Adhere to UltimateHealth's content and community standards.</li>
+        <li><strong>Thorough Investigation</strong> — Fully investigate reports before taking action.</li>
+        <li><strong>Report Issues</strong> — Notify Super Admins of technical issues or policy violations.</li>
+        <li><strong>Continuous Learning</strong> — Stay updated on health information best practices.</li>
+        <li><strong>Accountability</strong> — Take responsibility for your moderation decisions.</li>
+      </ul>
+      <div class="warning">
+        <strong>⚠ Important:</strong> Misuse of admin privileges, bias in content review, or breach of confidentiality
+        may result in immediate revocation of access and termination from the review team.
+      </div>
+    </div>
+
+    <!-- Security -->
+    <div class="section no-break">
+      <div class="section-title">Security &amp; Account Management</div>
+      <ul>
+        <li>Your account uses JWT-based authentication with automatic session management.</li>
+        <li>You can only be logged in on one device at a time for security.</li>
+        <li>Email verification is required before accessing admin features.</li>
+        <li>Regularly update your password and keep credentials secure.</li>
+        <li>Report any suspicious activity immediately.</li>
+      </ul>
+    </div>
+
+    <!-- Content Standards -->
+    <div class="section no-break">
+      <div class="section-title">Content Review Standards</div>
+      <p>Articles must meet all of the following criteria to be published:</p>
+      <ul class="checklist">
+        <li>Medically accurate and evidence-based information</li>
+        <li>Clear, well-structured, and grammatically correct writing</li>
+        <li>Proper citations and credible sources</li>
+        <li>Compliance with copyright and intellectual property laws</li>
+        <li>Appropriate images with proper attribution</li>
+        <li>No promotional or misleading content</li>
+      </ul>
+    </div>
+
+    <!-- Review Workflow -->
+    <div class="section no-break">
+      <div class="section-title">Review Workflow</div>
+      <ol>
+        <li><strong>Assignment</strong> — Self-assign from available articles or receive direct assignments.</li>
+        <li><strong>Review</strong> — Thoroughly evaluate content against quality standards.</li>
+        <li><strong>Feedback</strong> — Provide detailed feedback if changes are needed <em>(status:
+            AWAITING_USER)</em>.</li>
+        <li><strong>Re-review</strong> — Check author revisions when submitted <em>(status: REVIEW_PENDING)</em>.</li>
+        <li><strong>Decision</strong> — Publish approved articles or discard with explanation.</li>
+        <li><strong>Notification</strong> — Authors receive automated updates at each stage.</li>
+      </ol>
+    </div>
+
+    <!-- Moderation Actions -->
+    <div class="section">
+      <div class="section-title">Report Resolution &amp; Moderation Actions</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:30%">Action</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>RESOLVED</strong></td>
+            <td>Mark valid report as resolved. Decreases convict's active report count and sends resolution
+              notification.</td>
+          </tr>
+          <tr>
+            <td><strong>DISMISSED</strong></td>
+            <td>Dismiss false or invalid reports. Increases reporter's misuse count (automatic block after 3
+              dismissals).</td>
+          </tr>
+          <tr>
+            <td><strong>IGNORE</strong></td>
+            <td>Silently ignore report when convict/reporter is already banned or blocked.</td>
+          </tr>
+          <tr>
+            <td><strong>WARN_CONVICT</strong></td>
+            <td>Issue warning and remove offending content. Three warnings result in automatic ban.</td>
+          </tr>
+          <tr>
+            <td><strong>REMOVE_CONTENT</strong></td>
+            <td>Remove reported content (article, podcast, or comment) without issuing a warning.</td>
+          </tr>
+          <tr>
+            <td><strong>BLOCK_CONVICT</strong></td>
+            <td>Temporarily block user for a set period (typically 1 month) for policy violations.</td>
+          </tr>
+          <tr>
+            <td><strong>BAN_CONVICT</strong></td>
+            <td>Permanently ban user for severe or repeated violations.</td>
+          </tr>
+          <tr>
+            <td><strong>RESTORE_CONTENT</strong></td>
+            <td>Restore previously removed content if removal was incorrect or upon valid appeal.</td>
+          </tr>
+          <tr>
+            <td><strong>CONVICT_REQUEST_DISAPPROVED</strong></td>
+            <td>Reject user's request to restore their removed content.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="warning" style="margin-top:12px;">
+        <strong>⚠ Important:</strong> Moderation actions directly impact user experience and platform integrity. Abuse
+        of moderation powers, biased decisions, or failure to follow guidelines may result in removal from the
+        moderation team.
+      </div>
+    </div>
+
+    <!-- Data Privacy -->
+    <div class="section no-break">
+      <div class="section-title">Data Privacy &amp; Compliance</div>
+      <ul>
+        <li>User data must be handled in accordance with applicable privacy regulations.</li>
+        <li>Personal information must not be shared outside the platform.</li>
+        <li>Review decisions must be documented and justified.</li>
+        <li>Maintain transparency in all moderation actions.</li>
+      </ul>
+    </div>
+
+    <!-- Term & Termination -->
+    <div class="section no-break">
+      <div class="section-title">Term &amp; Termination</div>
+      <p>This agreement remains in effect as long as you maintain an active admin or moderator account. Either party may
+        terminate this agreement at any time. Upon termination, your access will be immediately revoked, and you must
+        cease all use of admin privileges.</p>
+    </div>
+
+    <!-- Updates -->
+    <div class="section no-break">
+      <div class="section-title">Updates to Agreement</div>
+      <p>UltimateHealth reserves the right to update this agreement. You will be notified of significant changes, and
+        continued use of admin privileges constitutes acceptance of the updated terms.</p>
+      <div class="info-box">
+        📅 <strong>Last Updated:</strong> April 2026 &nbsp;|&nbsp; 📧 <strong>Contact:</strong>
+        ultimate.health25@gmail.com
+      </div>
+    </div>
+
+    <!-- Signature -->
+    <div class="signature-block no-break">
+      <h2>Digital Acknowledgement &amp; Signature</h2>
+      <p style="text-align:center; font-size:10pt; color:#475569; margin-bottom:22px;">
+        By signing below, I confirm that I have read, understood, and agree to all terms outlined in this UltimateHealth
+        Review Team Agreement.
+      </p>
+      <div class="sig-row">
+        <div>
+          <div class="sig-field sig-filled">{{moderator_name}}</div>
+          <div class="sig-label">Full Name</div>
+        </div>
+        <div>
+          <div class="sig-field sig-filled">{{moderator_email}}</div>
+          <div class="sig-label">Email Address</div>
+        </div>
+        <div>
+          <div class="sig-field sig-filled">{{moderator_role}}</div>
+          <div class="sig-label">Role</div>
+        </div>
+        <div>
+          <div class="sig-field sig-filled">{{signed_date}}</div>
+          <div class="sig-label">Date Signed</div>
+        </div>
+      </div>
+
+
+      <!-- Digital Signature Image -->
+      <div class="signature-section" style="margin-top:24px;">
+        <div class="sig-label" style="margin-bottom:6px;">Digital Signature</div>
+        <div class="sig-image-box">
+          <!-- Server replaces this src with base64: data:image/png;base64,<signatureData> -->
+          <img src="{{signature_image}}" alt="Digital Signature" class="sig-img" />
+        </div>
+        <div class="sig-label" style="margin-top:6px;">
+          Signed digitally on {{signed_date}} &nbsp;·&nbsp; IP: {{signer_ip}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="doc-footer">
+      <span>UltimateHealth &copy; 2026 — Confidential</span>
+      <span>Review Team Agreement v1.0</span>
+    </div>
+
+  </div>
+</body>
+
+</html>

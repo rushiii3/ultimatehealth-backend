@@ -1,0 +1,19 @@
+info:
+  name: Generate Signature for Admin
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/admin/signature?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAZ21haWwuY29tIiwicm9sZSI6Im1vZGVyYXRvciIsInR5cGUiOiJlbWFpbF92ZXJpZmljYXRpb24iLCJqdGkiOiI4ZjgxYjFlZC0xMmY4LTQ0YTYtYmUxZi05MDMyNTA4Y2MzZmYiLCJpYXQiOjE3ODA1NTcwMDYsImV4cCI6MTc4MDU2MDYwNiwiYXVkIjoidWx0aW1hdGUtaGVhbHRoLXVzZXJzIiwiaXNzIjoidWx0aW1hdGUtaGVhbHRoIn0.Rd5-SKfic9EeXso4cOmWBjYP95yaEHzAFkmuLDwLSAs"
+  params:
+    - name: token
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAZ21haWwuY29tIiwicm9sZSI6Im1vZGVyYXRvciIsInR5cGUiOiJlbWFpbF92ZXJpZmljYXRpb24iLCJqdGkiOiI4ZjgxYjFlZC0xMmY4LTQ0YTYtYmUxZi05MDMyNTA4Y2MzZmYiLCJpYXQiOjE3ODA1NTcwMDYsImV4cCI6MTc4MDU2MDYwNiwiYXVkIjoidWx0aW1hdGUtaGVhbHRoLXVzZXJzIiwiaXNzIjoidWx0aW1hdGUtaGVhbHRoIn0.Rd5-SKfic9EeXso4cOmWBjYP95yaEHzAFkmuLDwLSAs
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

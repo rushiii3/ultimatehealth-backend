@@ -263,34 +263,49 @@ const updateGeneralDetailsSchema = z
             .max(160, 'About section cannot exceed 160 characters')
             .optional(),
     })
-    .strict();
+    .strict()
 
-const updateContactDetailsSchema = z.object({
-    email: baseFields.email,
-    phone: baseFields.contact_detail,
-}).strict();
+const updateContactDetailsSchema = z
+    .object({
+        email: baseFields.email,
+        phone: baseFields.contact_detail,
+    })
+    .strict()
 
-const updateProfessionalDetailsSchema = z.object({
-    qualification: z
-        .string()
-        .trim()
-        .min(2, 'Qualification required')
-        .max(100),
+const updateProfessionalDetailsSchema = z
+    .object({
+        qualification: z
+            .string()
+            .trim()
+            .min(2, 'Qualification required')
+            .max(100),
 
-    specialization: z
-        .string()
-        .trim()
-        .min(2, 'Specialization required')
-        .max(100),
+        specialization: z
+            .string()
+            .trim()
+            .min(2, 'Specialization required')
+            .max(100),
 
-    Years_of_experience: z
-        .number({
-            error: 'Experience must be a number',
-        })
-        .int('Experience must be a whole number')
-        .min(0, 'Cannot be negative')
-        .max(60, 'Experience looks unrealistic'),
-}).strict()
+        Years_of_experience: z
+            .number({
+                error: 'Experience must be a number',
+            })
+            .int('Experience must be a whole number')
+            .min(0, 'Cannot be negative')
+            .max(60, 'Experience looks unrealistic'),
+    })
+    .strict()
+
+const adminRegisterSchema = z
+    .object({
+        email: baseFields.email,
+        password: passwordSchema,
+        user_name: baseFields.user_name,
+        user_handle: baseFields.user_handle,
+        Profile_avtar: baseFields.Profile_image,
+    })
+    .strict()
+
 module.exports = {
     registerSchema,
     loginSchema,
@@ -305,5 +320,6 @@ module.exports = {
     updatePasswordSchema,
     updateGeneralDetailsSchema,
     updateContactDetailsSchema,
-    updateProfessionalDetailsSchema
+    updateProfessionalDetailsSchema,
+    adminRegisterSchema,
 }

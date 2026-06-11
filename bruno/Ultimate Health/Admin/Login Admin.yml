@@ -1,0 +1,33 @@
+info:
+  name: Login Admin
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/admin/login"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "test@gmail.com",
+        "password": "Test@123",
+        "fcmToken": "cMu4J5N9RWuGBxfs5l0YDC:APA91bG3l51EGJq8pawwGWDTJsSmofECJUGR2G4qzkf8NXZFTJKmvwX__SVQHp08vghKM_RwBLV9B5IoStlu9Ydo315_fJ7ycyYzmEWdHVYAwiJATmeHZWQ"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+        if(body.success && body.data.refreshToken){
+          bru.setEnvVar("refreshToken", body.data.refreshToken);
+          console.log(bru.getEnvVar("refreshToken"));
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

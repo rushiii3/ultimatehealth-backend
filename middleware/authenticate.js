@@ -1,95 +1,107 @@
-const expressAsyncHandler = require("express-async-handler");
-const { throwError } = require("../utils/throwError");
-const { HTTP_STATUS, ERROR_CODES } = require("../constants/errorConstants");
-const { verifyRefreshToken, hashToken } = require("../services/security/tokenService");
-const { findUserById } = require("../services/db/userService");
-const { findAdminById } = require("../services/db/adminService");
-const { ROLES } = require("../constants/roles");
+const expressAsyncHandler = require('express-async-handler')
+const { throwError } = require('../utils/throwError')
+const { HTTP_STATUS, ERROR_CODES } = require('../constants/errorConstants')
+const {
+    verifyRefreshToken,
+    hashToken,
+} = require('../services/security/tokenService')
+const { findUserById } = require('../services/db/userService')
+const { findAdminById } = require('../services/db/adminService')
+const { ROLES } = require('../constants/roles')
 
 const authenticate = expressAsyncHandler(async (req, _res, next) => {
-  const token =
-    req.cookies?.refreshToken ||
-    (req.headers.authorization?.startsWith("Bearer ")
-      ? req.headers.authorization.split(" ")[1]
-      : null);
+    const token =
+        req.cookies?.refreshToken ||
+        (req.headers.authorization?.startsWith('Bearer ')
+            ? req.headers.authorization.split(' ')[1]
+            : null)
 
-  if (!token) {
-    throwError(
-      HTTP_STATUS.UNAUTHORIZED,
-      ERROR_CODES.ACCESS_DENIED,
-      "Authentication required"
-    );
-  }
+    if (!token) {
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.ACCESS_DENIED,
+            'Authentication required'
+        )
+    }
 
-  const decoded = verifyRefreshToken(token);
+    const decoded = verifyRefreshToken(token)
 
-  if (!decoded?.userId || !decoded?.jti || !decoded?.role) {
-    throwError(
-      HTTP_STATUS.UNAUTHORIZED,
-      ERROR_CODES.UNAUTHORIZED_ACCESS,
-      "Invalid or expired token"
-    );
-  }
+    if (!decoded?.userId || !decoded?.jti || !decoded?.role) {
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.UNAUTHORIZED_ACCESS,
+            'Invalid or expired token'
+        )
+    }
 
-  let account = null;
+    let account = null
 
-  if (decoded.role === ROLES.ADMIN) {
-    account = await findAdminById(decoded.userId);
-  } else if (
-    decoded.role === ROLES.USER ||
-    decoded.role === ROLES.DOCTOR
-  ) {
-    account = await findUserById(decoded.userId);
-  }
+    if (
+        decoded.role === ROLES.ADMIN ||
+        decoded.role === ROLES.MODERATOR ||
+        decoded.role === ROLES.SUPER_ADMIN
+    ) {
+        account = await findAdminById(decoded.userId)
+    } else if (decoded.role === ROLES.USER || decoded.role === ROLES.DOCTOR) {
+        account = await findUserById(decoded.userId)
+    }
 
-  if (!account) {
-    throwError(
-      HTTP_STATUS.UNAUTHORIZED,
-      ERROR_CODES.UNAUTHORIZED_ACCESS,
-      "Account not found"
-    );
-  }
+    if (!account) {
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.UNAUTHORIZED_ACCESS,
+            'Account not found'
+        )
+    }
 
-  if (account.isBlockUser || account.isBannedUser) {
-    throwError(
-      HTTP_STATUS.FORBIDDEN,
-      ERROR_CODES.ACCESS_DENIED,
-      "Account access restricted"
-    );
-  }
+    if (!account.isVerified) {
+        throwError(
+            HTTP_STATUS.FORBIDDEN,
+            ERROR_CODES.ACCESS_DENIED,
+            'Email not verified'
+        )
+    }
 
-  if (
-    !account.refreshToken?.hashedRefreshToken ||
-    !account.refreshToken?.jti
-  ) {
-    throwError(
-      HTTP_STATUS.UNAUTHORIZED,
-      ERROR_CODES.UNAUTHORIZED_ACCESS,
-      "Session expired"
-    );
-  }
+    if (account.isBlockUser || account.isBannedUser) {
+        throwError(
+            HTTP_STATUS.FORBIDDEN,
+            ERROR_CODES.ACCESS_DENIED,
+            'Account access restricted'
+        )
+    }
 
-  const hashedToken = await hashToken(token);
+    if (
+        !account.refreshToken?.hashedRefreshToken ||
+        !account.refreshToken?.jti
+    ) {
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.UNAUTHORIZED_ACCESS,
+            'Session expired'
+        )
+    }
 
-  const isValidSession =
-    account.refreshToken.jti === decoded.jti &&
-    account.refreshToken.hashedRefreshToken === hashedToken;
+    const hashedToken = await hashToken(token)
 
-  if (!isValidSession) {
-    throwError(
-      HTTP_STATUS.UNAUTHORIZED,
-      ERROR_CODES.UNAUTHORIZED_ACCESS,
-      "Invalid session"
-    );
-  }
+    const isValidSession =
+        account.refreshToken.jti === decoded.jti &&
+        account.refreshToken.hashedRefreshToken === hashedToken
 
-  req.user = {
-    userId: account._id,
-    email: account.email,
-    role: decoded.role,
-  };
+    if (!isValidSession) {
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.UNAUTHORIZED_ACCESS,
+            'Invalid session'
+        )
+    }
 
-  next();
-});
+    req.user = {
+        userId: account._id,
+        email: account.email,
+        role: decoded.role,
+    }
 
-module.exports = { authenticate };
+    next()
+})
+
+module.exports = { authenticate }

@@ -1,0 +1,15 @@
+info:
+  name: Update Tag By ID
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/articles/tags/6a2136902ced59864b07dcd5"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

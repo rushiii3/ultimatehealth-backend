@@ -1,171 +1,208 @@
-const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
-const { throwError } = require("../../utils/throwError");
-const { HTTP_STATUS, ERROR_CODES } = require("../../constants/errorConstants");
-require("dotenv").config();
+const crypto = require('crypto')
+const jwt = require('jsonwebtoken')
+const { throwError } = require('../../utils/throwError')
+const { HTTP_STATUS, ERROR_CODES } = require('../../constants/errorConstants')
+require('dotenv').config()
 
-const ISSUER = 'ultimate-health';
-const AUDIENCE = 'ultimate-health-users';
+const ISSUER = 'ultimate-health'
+const AUDIENCE = 'ultimate-health-users'
 
 const baseOptions = {
     issuer: ISSUER,
     audience: AUDIENCE,
     algorithm: 'HS256',
-};
-
-const generateJti = () => crypto.randomUUID();
-
-const generateAccessToken = (payload, expiresIn) => {
-    const expiry = expiresIn || process.env.JWT_ACCESS_EXPIRY || "15m";
-    const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
-
-    const accessToken = jwt.sign(
-        payload,
-        secret,
-        { expiresIn: expiry }
-    );
-
-    return accessToken;
 }
 
+const generateJti = () => crypto.randomUUID()
+
+const generateAccessToken = (payload, expiresIn) => {
+    const expiry = expiresIn || process.env.JWT_ACCESS_EXPIRY || '15m'
+    const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET
+
+    const accessToken = jwt.sign(payload, secret, { expiresIn: expiry })
+
+    return accessToken
+}
 
 const generateRefreshToken = (payload, expiresIn) => {
-    const secret = process.env.JWT_REFRESH_SECRET;
+    const secret = process.env.JWT_REFRESH_SECRET
     if (!secret) {
-        throwError(HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_ERROR, "Something went wrong. Please try again later.");
+        throwError(
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            ERROR_CODES.INTERNAL_ERROR,
+            'Something went wrong. Please try again later.'
+        )
     }
-    const expiry =
-        expiresIn ??
-        process.env.JWT_REFRESH_EXPIRY ??
-        "7d";
+    const expiry = expiresIn ?? process.env.JWT_REFRESH_EXPIRY ?? '7d'
     if (!expiry) {
-        throwError(HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_ERROR, "Something went wrong. Please try again later.");
-
+        throwError(
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            ERROR_CODES.INTERNAL_ERROR,
+            'Something went wrong. Please try again later.'
+        )
     }
 
     const refreshTokenPayload = {
         ...payload,
-        type: "refresh",
+        type: 'refresh',
         jti: generateJti(),
-    };
-    const refreshToken = jwt.sign(
-        refreshTokenPayload,
-        secret,
-        { ...baseOptions, expiresIn: expiry }
-    );
+    }
+    const refreshToken = jwt.sign(refreshTokenPayload, secret, {
+        ...baseOptions,
+        expiresIn: expiry,
+    })
 
-    return {refreshToken, jti: refreshTokenPayload.jti};
+    return { refreshToken, jti: refreshTokenPayload.jti }
 }
 
 const generateVerificationToken = (payload, expiresIn) => {
-    const secret = process.env.JWT_VERIFICATION_SECRET;
+    const secret = process.env.JWT_VERIFICATION_SECRET
     if (!secret) {
-        throwError(HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_ERROR, "Something went wrong. Please try again later.");
+        throwError(
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            ERROR_CODES.INTERNAL_ERROR,
+            'Something went wrong. Please try again later.'
+        )
     }
-    const expiry =
-        expiresIn ??
-        process.env.JWT_VERIFICATION_EXPIRY ??
-        "1h";
+    const expiry = expiresIn ?? process.env.JWT_VERIFICATION_EXPIRY ?? '1h'
 
     if (!expiry) {
-        throwError(HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_ERROR, "Something went wrong. Please try again later.");
-
+        throwError(
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            ERROR_CODES.INTERNAL_ERROR,
+            'Something went wrong. Please try again later.'
+        )
     }
 
     const verificationPayload = {
         ...payload,
-        type: "email_verification",
+        type: 'email_verification',
         jti: generateJti(),
-    };
+    }
 
+    const verificationToken = jwt.sign(verificationPayload, secret, {
+        ...baseOptions,
+        expiresIn: expiry,
+    })
 
-    const verificationToken = jwt.sign(
-        verificationPayload,
-        secret,
-        { ...baseOptions, expiresIn: expiry }
-    );
-
-    return { verificationToken, jti: verificationPayload.jti };
+    return { verificationToken, jti: verificationPayload.jti }
 }
 
-
 const verifyAccessToken = (token) => {
-    const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+    const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET
     const decoded = jwt.verify(token, secret, {
         issuer: ISSUER,
         audience: AUDIENCE,
-    });
-    return decoded;
+    })
+    return decoded
 }
-
 
 const verifyRefreshToken = (token) => {
     try {
-        const secret = process.env.JWT_REFRESH_SECRET;
+        const secret = process.env.JWT_REFRESH_SECRET
         if (!secret) {
-            throwError(HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_ERROR, "Something went wrong. Please try again later.");
+            throwError(
+                HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                ERROR_CODES.INTERNAL_ERROR,
+                'Something went wrong. Please try again later.'
+            )
         }
         const decoded = jwt.verify(token, secret, {
             issuer: ISSUER,
             audience: AUDIENCE,
-            algorithms: ["HS256"]
-        });
-        if (!decoded || decoded.type !== "refresh") {
-            throwError(HTTP_STATUS.UNAUTHORIZED, ERROR_CODES.UNAUTHORIZED_ACCESS, 'Invalid or expired verification token');
+            algorithms: ['HS256'],
+        })
+        if (!decoded || decoded.type !== 'refresh') {
+            throwError(
+                HTTP_STATUS.UNAUTHORIZED,
+                ERROR_CODES.UNAUTHORIZED_ACCESS,
+                'Invalid or expired verification token'
+            )
         }
 
-        return decoded;
+        return decoded
     } catch (err) {
-        throwError(HTTP_STATUS.UNAUTHORIZED, ERROR_CODES.UNAUTHORIZED_ACCESS, "Invalid or expired token");
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.UNAUTHORIZED_ACCESS,
+            'Invalid or expired token'
+        )
     }
-
 }
-
 
 const verifyVerificationToken = (token) => {
     try {
-        const secret = process.env.JWT_VERIFICATION_SECRET;
+        const secret = process.env.JWT_VERIFICATION_SECRET
         if (!secret) {
-            throwError(HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_ERROR, "Something went wrong. Please try again later.");
+            throwError(
+                HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                ERROR_CODES.INTERNAL_ERROR,
+                'Something went wrong. Please try again later.'
+            )
         }
         const decoded = jwt.verify(token, secret, {
             issuer: ISSUER,
             audience: AUDIENCE,
-            algorithms: ["HS256"]
-        });
-        if (!decoded || decoded.type !== "email_verification") {
-            throwError(HTTP_STATUS.UNAUTHORIZED, ERROR_CODES.UNAUTHORIZED_ACCESS, 'Invalid or expired verification token');
+            algorithms: ['HS256'],
+        })
+        if (!decoded || decoded.type !== 'email_verification') {
+            throwError(
+                HTTP_STATUS.UNAUTHORIZED,
+                ERROR_CODES.UNAUTHORIZED_ACCESS,
+                'Invalid or expired verification token'
+            )
         }
-        return decoded;
+        return decoded
     } catch (error) {
-        throwError(HTTP_STATUS.UNAUTHORIZED, ERROR_CODES.UNAUTHORIZED_ACCESS, "Invalid or expired token");
-
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.UNAUTHORIZED_ACCESS,
+            'Invalid or expired token'
+        )
     }
-
 }
-
 
 const verifyToken = (token) => {
-    const secret = process.env.JWT_SECRET;
-    const decoded = jwt.verify(token, secret);
-    return decoded;
+    const secret = process.env.JWT_SECRET
+    const decoded = jwt.verify(token, secret)
+    return decoded
 }
-
 
 const hashToken = (token) => {
     return crypto
         .createHmac('sha256', process.env.TOKEN_SECRET)
         .update(token)
-        .digest('hex');
-};
+        .digest('hex')
+}
 
 const generateOtp = () => {
-    return crypto.randomInt(100000, 1000000).toString(); // 6 digit OTP
+    return crypto.randomInt(100000, 1000000).toString() // 6 digit OTP
 }
 
 const verifyOtp = (inputOtp, hashedOtp) => {
-    const inputHashed = hashToken(inputOtp);
-    return inputHashed === hashedOtp;
+    const inputHashed = hashToken(inputOtp)
+    return inputHashed === hashedOtp
+}
+
+const generateSignature = async (payload) => {
+    return crypto
+        .createHmac('sha256', payload.userId.toString())
+        .update(payload.toString())
+        .digest('hex')
+}
+
+const generateVerificationSignature = async (payload, signature) => {
+    return crypto
+        .createHmac('sha256', signature.toString())
+        .update(payload.toString())
+        .digest('hex')
+}
+
+const generateArticleSignature = async (payload) => {
+    return crypto
+        .createHmac('sha256', payload.record_id.toString())
+        .update(payload.toString())
+        .digest('hex')
 }
 
 module.exports = {
@@ -185,5 +222,9 @@ module.exports = {
     verifyToken,
 
     // hash token
-    hashToken
+    hashToken,
+    // signature functions
+    generateSignature,
+    generateVerificationSignature,
+    generateArticleSignature,
 }

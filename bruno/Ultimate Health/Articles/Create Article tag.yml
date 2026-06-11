@@ -1,0 +1,21 @@
+info:
+  name: Create Article tag
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/articles/tags"
+  body:
+    type: json
+    data: |-
+      {
+        "name":"test"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

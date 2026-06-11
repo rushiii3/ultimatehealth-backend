@@ -1,0 +1,19 @@
+info:
+  name: Verify Admin Email
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/admin/verifyEmail?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAZ21haWwuY29tIiwicm9sZSI6Im1vZGVyYXRvciIsInR5cGUiOiJlbWFpbF92ZXJpZmljYXRpb24iLCJqdGkiOiJkNDQwNzI4MS01ODZmLTQxNjAtODg1Mi0yMWYyMjkxMTk5YzQiLCJpYXQiOjE3ODAzMzc3OTEsImV4cCI6MTc4MDM0MTM5MSwiYXVkIjoidWx0aW1hdGUtaGVhbHRoLXVzZXJzIiwiaXNzIjoidWx0aW1hdGUtaGVhbHRoIn0.pEc1jTTIpHU38gkVqjWdte5UF-nPeVCFrz0ygDPWYYM"
+  params:
+    - name: token
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAZ21haWwuY29tIiwicm9sZSI6Im1vZGVyYXRvciIsInR5cGUiOiJlbWFpbF92ZXJpZmljYXRpb24iLCJqdGkiOiJkNDQwNzI4MS01ODZmLTQxNjAtODg1Mi0yMWYyMjkxMTk5YzQiLCJpYXQiOjE3ODAzMzc3OTEsImV4cCI6MTc4MDM0MTM5MSwiYXVkIjoidWx0aW1hdGUtaGVhbHRoLXVzZXJzIiwiaXNzIjoidWx0aW1hdGUtaGVhbHRoIn0.pEc1jTTIpHU38gkVqjWdte5UF-nPeVCFrz0ygDPWYYM
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

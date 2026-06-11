@@ -1,0 +1,15 @@
+info:
+  name: Delete Article Tag by ID
+  type: http
+  seq: 7
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
