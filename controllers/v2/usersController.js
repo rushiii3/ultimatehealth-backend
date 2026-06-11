@@ -37,6 +37,8 @@ const {
 const {
   generateAccessToken,
   verifyToken,
+  generateOtp,
+  hashToken,
 } = require("../../services/security/tokenService");
 const {
   isSamePassword,
@@ -112,8 +114,7 @@ module.exports.register = expressAsyncHandler(async (req, res) => {
     sendSuccess(
       res,
       HTTP_STATUS.CREATED,
-      "Registration successful. Please verify your email.",
-      verificationToken,
+      "Registration successful. Please verify your email."
     );
   }
 });
@@ -214,11 +215,12 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
       );
     }
 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const otp = generateOtp();
+    const hashedOtp = await hashToken(otp);
+    const otpExpires = Date.now() + 10 * 60 * 1000;
 
     if (user) {
-      await updateUserOtp(user, otp, otpExpires);
+      await updateUserOtp(user, hashedOtp, otpExpires);
     } else {
       if (!admin.isVerified) {
         throwError(
@@ -227,7 +229,7 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
           "Admin is not verified.",
         );
       }
-      await updateAdminOtp(admin, otp, otpExpires);
+      await updateAdminOtp(admin, hashedOtp, otpExpires);
     }
     const result = await sendOtpMail(email, otp);
     if (result) {
@@ -284,7 +286,8 @@ module.exports.checkOtp = expressAsyncHandler(async (req, res) => {
     );
   }
   if (user) {
-    if (user.otp !== otp || user.otpExpires < Date.now()) {
+    const hashedInput = await hashToken(otp);
+    if (hashedInput !== user.otp || user.otpExpires < Date.now()) {
       throwError(
         HTTP_STATUS.BAD_REQUEST,
         ERROR_CODES.VALIDATION_ERROR,
@@ -292,7 +295,8 @@ module.exports.checkOtp = expressAsyncHandler(async (req, res) => {
       );
     }
   } else {
-    if (!admin || admin.otp !== otp || admin.otpExpires < Date.now()) {
+    const hashedInput = await hashToken(otp);
+    if (!admin || hashedInput !== admin.otp || admin.otpExpires < Date.now()) {
       throwError(
         HTTP_STATUS.BAD_REQUEST,
         ERROR_CODES.VALIDATION_ERROR,
@@ -376,19 +380,39 @@ module.exports.login = expressAsyncHandler(async (req, res) => {
 
     await loginUser(user, refreshToken, fcmToken);
 
-    // Set cookies for tokens
-    res.cookie("accessToken", accessToken, { httpOnly: true, maxAge: 900000 });
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      maxAge: 604800000,
-    });
+    const isMobile = req.headers['x-client-type'] === 'mobile';
 
-    sendSuccess(
-      res,
-      HTTP_STATUS.OK,
-      "Login Successful",
-      { user, accessToken, refreshToken },
-    );
+    if (!isMobile) {
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 15 * 60 * 1000,
+      });
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
+    const responsePayload = {
+      user: {
+        _id: user._id,
+        email: user.email,
+        user_name: user.user_name,
+        isDoctor: user.isDoctor,
+        isVerified: user.isVerified,
+        user_handle: user.user_handle,
+      }
+    };
+
+    if (isMobile) {
+      responsePayload.refreshToken = refreshToken;
+    }
+
+    sendSuccess(res, HTTP_STATUS.OK, "Login Successful", responsePayload);
 
 });
 
@@ -447,18 +471,22 @@ module.exports.refreshToken = expressAsyncHandler(async (req, res) => {
 
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
-      maxAge: 900000,
-    }); // 15 minutes
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      maxAge: 604800000,
-    }); // 7 days
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     sendSuccess(
       res,
       HTTP_STATUS.OK,
       "Refresh token generated successfully",
-      { accessToken: newAccessToken, refreshToken: newRefreshToken },
+      { accessToken: newAccessToken }
     );
 });
 

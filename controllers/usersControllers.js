@@ -181,14 +181,18 @@ module.exports.login = expressAsyncHandler(async (req, res) => {
 
   await loginUser(user._id, refreshToken, jti, fcmToken);
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  const isMobile = req.headers['x-client-type'] === 'mobile';
 
-  return sendSuccess(res, HTTP_STATUS.OK, "Login successful", {
+  if (!isMobile) {
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  const responsePayload = {
     user: {
       _id: user._id,
       email: user.email,
@@ -196,9 +200,14 @@ module.exports.login = expressAsyncHandler(async (req, res) => {
       isDoctor: user.isDoctor,
       isVerified: user.isVerified,
       user_handle: user.user_handle,
-    },
-    refreshToken,
-  });
+    }
+  };
+
+  if (isMobile) {
+    responsePayload.refreshToken = refreshToken;
+  }
+
+  return sendSuccess(res, HTTP_STATUS.OK, "Login successful", responsePayload);
 });
 
 module.exports.getprofile = expressAsyncHandler(async (req, res) => {
@@ -335,9 +344,6 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
             "Failed to send OTP email",
           );
         }
-      }
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`OTP for ${email}: ${otp}`);
       }
 
       if (user) {

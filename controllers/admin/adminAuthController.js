@@ -76,8 +76,7 @@ module.exports.register = expressAsyncHandler(
       // sendVerificationEmail(email, verificationToken);
 
       res.status(201).json({
-        message: "Registration successful. Please verify your email.",
-        token: verificationToken,
+        message: "Registration successful. Please verify your email."
       });
 
     } catch (error) {
@@ -157,12 +156,21 @@ module.exports.login = expressAsyncHandler(
       
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        maxAge: 604800000,
-      }); // 7 days
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
 
-      res
-        .status(200)
-        .json({ user, refreshToken, message: "Login Successful" });
+      res.status(200).json({
+        message: "Login Successful",
+        user: {
+          _id: user._id,
+          email: user.email,
+          user_name: user.user_name,
+          user_handle: user.user_handle,
+          isVerified: user.isVerified,
+        }
+      });
     } catch (error) {
       console.log("Login Error", error);
 
