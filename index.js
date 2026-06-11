@@ -37,6 +37,8 @@ const podcastAdminRoute = require('./routes/podcastReviewRoute');
 const commentRoute = require('./routes/commentRoute');
 const aiRoute = require('./routes/aiRoute');
 const shareRoute = require('./routes/shareRoute');
+const contactRoutes = require('./routes/contactRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes');
 const {
     sendPostNotification,
     sendPostLikeNotification,
@@ -105,6 +107,8 @@ app.use("/api/review", commentRoute);
 app.use("/api/language", languageRoutes);
 app.use("/api/gemini", aiRoute);
 app.use("/api", shareRoute );
+app.use("/api", contactRoutes);
+app.use("/api", newsletterRoutes);
 
 // Swagger
 //app.use('/docs/swagger.json', express.static('./swagger.json'));

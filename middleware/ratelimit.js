@@ -1,4 +1,4 @@
-const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
+const { rateLimit } = require('express-rate-limit');
 const rateLimitResponse = (code, message) => ({
   success: false,
   error: { code, message },
@@ -9,9 +9,7 @@ const baseConfig = {
   legacyHeaders: false,
 
   keyGenerator: (req) => {
-    const ip = ipKeyGenerator(req.ip);
-
-    return `${ip}-${req.body?.email || req.user?.id || 'guest'}`;
+    return `${req.ip}-${req.body?.email || req.user?.id || 'guest'}`;
   },
 
   handler: (req, res, next, options) => {
