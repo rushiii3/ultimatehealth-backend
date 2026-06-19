@@ -109,6 +109,33 @@ const getMyProfile = async (adminId) => {
         .lean()
 }
 
+const updateAdminPasswordById = async (adminId, newPassword) => {
+    const hashedPassword = await generateHashPassword(newPassword)
+    return Admin.findByIdAndUpdate(adminId, {
+        $set: {
+            password: hashedPassword,
+        },
+    })
+}
+
+const updateAdminProfileById = async (
+    adminId,
+    username,
+    userhandle,
+    profile_avatar
+) => {
+    return Admin.findByIdAndUpdate(adminId, {
+        $set: {
+            user_name: username,
+            user_handle: userhandle,
+            Profile_avtar: profile_avatar,
+        },
+    })
+}
+
+const deletAdminById = async (adminId) => {
+    return Admin.findByIdAndDelete(adminId)
+}
 module.exports = {
     checkExistingAdmin,
     findAdminByEmail,
@@ -122,4 +149,7 @@ module.exports = {
     loginAdmin,
     getMyProfile,
     findAdminById,
+    updateAdminPasswordById,
+    updateAdminProfileById,
+    deletAdminById,
 }

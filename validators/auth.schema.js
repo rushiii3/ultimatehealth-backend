@@ -306,6 +306,67 @@ const adminRegisterSchema = z
     })
     .strict()
 
+const agreementSchema = z
+    .object({
+        isAgreed: z.literal(true, {
+            error: 'Agreement must be accepted',
+        }),
+
+        token: z
+            .string({
+                error: 'Token must be a string',
+            })
+            .trim()
+            .regex(
+                /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/,
+                'Invalid JWT token'
+            ),
+
+        signatureHash: z
+            .string({
+                error: 'Signature hash must be a string',
+            })
+            .trim()
+            .regex(/^[a-f0-9]{64}$/i, 'Invalid SHA-256 signature hash'),
+
+        signature: z
+            .string({
+                error: 'Signature must be a string',
+            })
+            .trim()
+            .regex(
+                /^data:image\/png;base64,[A-Za-z0-9+/=\s]+$/,
+                'Invalid signature image'
+            )
+            .refine(
+                (value) => {
+                    const base64 = value.replace(/^data:image\/png;base64,/, '')
+
+                    const sizeInBytes = Buffer.byteLength(base64, 'base64')
+
+                    return sizeInBytes <= 1024 * 1024 // 1 MB
+                },
+                {
+                    message: 'Signature image exceeds 1MB limit',
+                }
+            ),
+    })
+    .strict()
+
+const adminUpdateProfile = z
+    .object({
+        user_name: baseFields.user_name,
+        user_handle: baseFields.user_handle,
+        profile_avtar: baseFields.Profile_image,
+    })
+    .strict()
+
+const adminDeleteProfile = z
+    .object({
+        password: passwordSchema,
+    })
+    .strict()
+
 module.exports = {
     registerSchema,
     loginSchema,
@@ -322,4 +383,7 @@ module.exports = {
     updateContactDetailsSchema,
     updateProfessionalDetailsSchema,
     adminRegisterSchema,
+    agreementSchema,
+    adminUpdateProfile,
+    adminDeleteProfile,
 }

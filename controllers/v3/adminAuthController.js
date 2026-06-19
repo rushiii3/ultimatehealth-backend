@@ -31,6 +31,10 @@ const {
     logoutAdmin,
     getMyProfile,
     findAdminById,
+    updateAdminPasswordById,
+    findAdminByHandle,
+    updateAdminProfileById,
+    deletAdminById,
 } = require('../../services/db/adminService')
 const { checkExistingUser } = require('../../services/db/userService')
 const { ROLES } = require('../../constants/roles')
@@ -335,7 +339,6 @@ module.exports.login = expressAsyncHandler(async (req, res) => {
 
 module.exports.logout = expressAsyncHandler(async (req, res) => {
     const { userId, role } = req.user
-    console.log('Logging out userId:', userId, 'role:', role)
     await logoutAdmin(userId)
 
     res.clearCookie('refreshToken', {
@@ -368,137 +371,136 @@ module.exports.getprofile = expressAsyncHandler(async (req, res) => {
 
 // update user password
 module.exports.updateAdminPassword = expressAsyncHandler(async (req, res) => {
-    try {
-        //const userId = req?.userId;
-        const { new_password, email } = req.body
+    const userId = req?.user.userId
+    const { new_password, old_password } = req.validateBody
 
-        // Check if both old and new passwords are provided
-        if (!new_password || !email) {
-            return res
-                .status(400)
-                .json({ error: 'Missing passwords and email' })
-        }
-
-        // Check if the new password is long enough
-        if (new_password.length < 6) {
-            return res.status(400).json({ error: 'Password too short' })
-        }
-
-        // Find the user by ID
-        const user = await admin.findOne({ email })
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' })
-        }
-
-        // Ensure the new password is not the same as the old password
-        const isSameAsOldPassword = await bcrypt.compare(
-            new_password,
-            user.password
+    const admin = await findAdminById(userId)
+    if (!admin) {
+        throwError(
+            HTTP_STATUS.NOT_FOUND,
+            ERROR_CODES.RESOURCE_NOT_FOUND,
+            'Admin not found'
         )
-        if (isSameAsOldPassword) {
-            return res.status(400).json({ error: 'Same as old password' })
-        }
-
-        // Hash the new password
-        const salt = await bcrypt.genSalt(10)
-        const newHashedPassword = await bcrypt.hash(new_password, salt)
-
-        // Update the user's password
-        user.password = newHashedPassword
-        await user.save()
-        res.json({ status: true, message: 'Password updated' })
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ error: 'Server error' })
     }
+    // Check if the old password matches the stored password
+    const isOldPasswordValid = await isSamePassword(
+        old_password,
+        admin.password
+    )
+    if (!isOldPasswordValid) {
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.INVALID_CREDENTIALS,
+            'Invalid old password'
+        )
+    }
+
+    // Ensure the new password is not the same as the old password
+    const isSameAsOldPassword = await isSamePassword(
+        new_password,
+        admin.password
+    )
+    if (isSameAsOldPassword) {
+        throwError(
+            HTTP_STATUS.BAD_REQUEST,
+            ERROR_CODES.VALIDATION_ERROR,
+            'Same as old password'
+        )
+    }
+
+    const updatedAdminPassword = await updateAdminPasswordById(
+        admin._id,
+        new_password
+    )
+    if (!updatedAdminPassword) {
+        throwError(
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            ERROR_CODES.INTERNAL_ERROR,
+            'Failed to update password'
+        )
+    }
+
+    sendSuccess(res, HTTP_STATUS.OK, 'Password updated successfully')
 })
 
 // Edit profile: user_name, user_handle, password, profile_avtar
 
 module.exports.editProfile = expressAsyncHandler(async (req, res) => {
-    const { user_name, user_handle, password, profile_avtar } = req.body
-    const userId = req.userId
+    const { user_name, user_handle, profile_avtar } = req.validateBody
+    const userId = req?.user.userId
+    const isHandleExists = await findAdminByHandle(user_handle)
 
-    if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized' })
-    }
-
-    try {
-        const user = await admin.findById(userId)
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' })
-        }
-
-        user.user_name = user_name || user.user_name
-        user.user_handle = user_handle || user.user_handle
-        user.profile_avtar = profile_avtar || user.profile_avtar
-        // encrypt password
-        const isSameAsOldPassword = await bcrypt.compare(
-            password,
-            user.password
+    if (isHandleExists) {
+        throwError(
+            HTTP_STATUS.CONFLICT,
+            ERROR_CODES.RESOURCE_ALREADY_EXISTS,
+            'User handle already exists'
         )
-        if (isSameAsOldPassword) {
-            return res.status(400).json({ error: 'Same as old password' })
-        }
-
-        // Hash the new password
-        const salt = await bcrypt.genSalt(10)
-        const newHashedPassword = await bcrypt.hash(password, salt)
-
-        // Update the user's password
-        user.password = newHashedPassword
-        await user.save()
-
-        res.status(200).json({ status: true, message: 'Profile updated' })
-    } catch (err) {
-        console.error(err)
-        res.status(500).json({ error: 'Server error' })
     }
+    const updateProfile = await updateAdminProfileById(
+        userId,
+        user_name,
+        user_handle,
+        profile_avtar
+    )
+    if (!updateProfile) {
+        throwError(
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            ERROR_CODES.INTERNAL_ERROR,
+            'Failed to update user info'
+        )
+    }
+
+    sendSuccess(res, HTTP_STATUS.OK, 'Profile updated successfully')
 })
 
 // Duplicate logout function removed - using expressAsyncHandler version above
 
 module.exports.deleteAdmin = expressAsyncHandler(async (req, res) => {
-    try {
-        const { password } = req.body
-        const user = await admin.findById(req.userId)
-
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' })
-        }
-
-        if (!user.isVerified) {
-            return res
-                .status(403)
-                .json({ error: 'Email not verified. Please check your email.' })
-        }
-        const isPasswordValid = await bcrypt.compare(password, user.password)
-
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Invalid password' })
-        }
-        // delete profile image from aws
-        const avatar = user?.Profile_avtar
-        if (
-            typeof avatar === 'string' &&
-            avatar.trim() !== '' &&
-            !avatar.startsWith('http://') &&
-            !avatar.startsWith('https://') &&
-            !avatar.startsWith('//') &&
-            !avatar.startsWith('data:')
-        ) {
-            await deleteFileFn(avatar)
-        }
-
-        await admin.deleteOne({ email: user.email })
-
-        res.json({
-            status: true,
-            message: 'account has been removed from database',
-        })
-    } catch (error) {
-        res.status(500).json({ error: error.message })
+    const { password } = req.validateBody
+    const userId = req?.user.userId
+    const admin = await findAdminById(userId)
+    if (!admin) {
+        throwError(
+            HTTP_STATUS.NOT_FOUND,
+            ERROR_CODES.RESOURCE_NOT_FOUND,
+            'Admin not found'
+        )
     }
+
+    const isOldPasswordValid = await isSamePassword(password, admin.password)
+    if (!isOldPasswordValid) {
+        throwError(
+            HTTP_STATUS.UNAUTHORIZED,
+            ERROR_CODES.INVALID_CREDENTIALS,
+            'Invalid old password'
+        )
+    }
+
+    // delete profile image from aws
+    // const avatar = admin?.Profile_avtar
+    // if (
+    //     typeof avatar === 'string' &&
+    //     avatar.trim() !== '' &&
+    //     !avatar.startsWith('http://') &&
+    //     !avatar.startsWith('https://') &&
+    //     !avatar.startsWith('//') &&
+    //     !avatar.startsWith('data:')
+    // ) {
+    //     await deleteFileFn(avatar)
+    // }
+
+    const deletedAdmin = await deletAdminById(userId)
+
+    if (!deletedAdmin) {
+        throwError(
+            HTTP_STATUS.INTERNAL_SERVER_ERROR,
+            ERROR_CODES.INTERNAL_ERROR,
+            'Failed to delete account'
+        )
+    }
+
+    sendSuccess(res, HTTP_STATUS.OK, 'Account deleted successfully!')
 })
 
 module.exports.getAgreementPDF = expressAsyncHandler(async (req, res) => {

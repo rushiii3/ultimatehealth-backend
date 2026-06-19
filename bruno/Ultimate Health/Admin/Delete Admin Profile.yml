@@ -1,0 +1,21 @@
+info:
+  name: Delete Admin Profile
+  type: http
+  seq: 12
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/v3/admin/delete"
+  body:
+    type: json
+    data: |-
+      {
+        "password": "Password@123"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

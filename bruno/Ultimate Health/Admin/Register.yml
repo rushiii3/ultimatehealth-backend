@@ -5,14 +5,14 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/api/admin/register"
+  url: "{{baseUrl}}/api/v3/admin/register"
   body:
     type: json
     data: |-
       {
         "user_name": "test",
-        "user_handle": "test",
-        "email":"test@gmail.com",
+        "user_handle": "test2",
+        "email":"tes2t@gmail.com",
         "password":"Test@123"
       }
   auth: inherit
@@ -22,3 +22,235 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+docs: |-
+  # API Documentation
+
+  # Register Admin
+
+  Creates a new admin account in the system.
+
+  ---
+
+  ## Endpoint
+
+  ```http
+  POST /api/v3/admin/register
+  ```
+
+  ---
+
+  ## Access
+
+  | Property       | Value          |
+  | -------------- | -------------- |
+  | Route Type     | 🟢 Public      |
+  | Authentication | Not Required   |
+  | Authorization  | Anyone         |
+
+  > **What does this mean?**
+  > Anyone can call this endpoint without logging in or sending an access token. It is used to create the very first account (or any new admin account), so it is open by design.
+
+  > **Note:** Bruno may show `auth: inherit` on this request because of collection-level settings, but the server does **not** actually check for any token here. You can safely ignore it or set it to "No Auth" in Bruno.
+
+  ---
+
+  ## Headers
+
+  | Header       | Required | Example             | Description         |
+  | ------------ | -------- | -------------------- | -------------------- |
+  | Content-Type | ✅ Yes   | `application/json`   | Request body format |
+
+  No `Authorization` header is needed for this endpoint.
+
+  ---
+
+  # Request Body
+
+  Send the following JSON in the request body.
+
+  | Field          | Type   | Required | Description                  | Example                |
+  | -------------- | ------ | -------- | ----------------------------- | ----------------------- |
+  | user_name      | string | ✅       | Display name of the admin     | `"test"`                |
+  | user_handle    | string | ✅       | Unique username/handle         | `"test2"`               |
+  | email          | string | ✅       | Admin's email address          | `"tes2t@gmail.com"`     |
+  | password       | string | ✅       | Account password                | `"Test@123"`            |
+  | Profile_avtar  | string | ❌       | Profile picture URL             | `"https://example.com/avatar.png"` |
+
+  > ⚠️ This endpoint uses **strict validation** — sending any field that is not in the table above (a typo, an extra field, etc.) will cause the whole request to fail.
+
+  ---
+
+  ## Example Request
+
+  ```json
+  {
+    "user_name": "test",
+    "user_handle": "test2",
+    "email": "tes2t@gmail.com",
+    "password": "Test@123"
+  }
+  ```
+
+  ---
+
+  # Validation Rules
+
+  | Field         | Rules                                                                                          |
+  | ------------- | ------------------------------------------------------------------------------------------------ |
+  | user_name     | Required. 2–50 characters. Letters and spaces only.                                              |
+  | user_handle   | Required. 3–20 characters. Letters, numbers, and underscores only.                                |
+  | email         | Required. Must be a valid email. Max 254 characters. Automatically converted to lowercase.        |
+  | password      | Required. 8–100 characters. Must include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character. |
+  | Profile_avtar | Optional. Must be a valid URL if provided.                                                        |
+
+  ---
+
+  # Success Response
+
+  ### Status Code
+
+  ```http
+  200 OK
+  ```
+
+  ### Response Body
+
+  ```json
+  {
+    "success": true,
+    "message": "Admin registered successfully."
+  }
+  ```
+
+  > Note: this endpoint only returns a success message — it does **not** return a token or the created user's data. To log in afterward, call the login endpoint separately.
+
+  ---
+
+  # Error Responses
+
+  ## 400 Bad Request
+
+  The request body failed validation (missing field, weak password, invalid email, unknown field, etc.).
+
+  ```json
+  {
+    "success": false,
+    "message": "Password must contain at least one uppercase letter."
+  }
+  ```
+
+  ---
+
+  ## 409 Conflict
+
+  An account with the same email or handle already exists.
+
+  ```json
+  {
+    "success": false,
+    "message": "Email or handle already in use."
+  }
+  ```
+
+  ---
+
+  ## 500 Internal Server Error
+
+  Unexpected server error.
+
+  ```json
+  {
+    "success": false,
+    "message": "Something went wrong."
+  }
+  ```
+
+  ---
+
+  # Response Fields
+
+  | Field   | Type    | Description                             |
+  | ------- | ------- | ---------------------------------------- |
+  | success | boolean | Indicates whether the request succeeded  |
+  | message | string  | Human-readable response message          |
+
+  ---
+
+  # Example cURL
+
+  ```bash
+  curl --request POST \
+    --url "{{baseUrl}}/api/v3/admin/register" \
+    --header "Content-Type: application/json" \
+    --data '{
+      "user_name": "test",
+      "user_handle": "test2",
+      "email": "tes2t@gmail.com",
+      "password": "Test@123"
+    }'
+  ```
+
+  ---
+
+  # Example JavaScript (Fetch API)
+
+  ```javascript
+  const response = await fetch("/api/v3/admin/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      user_name: "test",
+      user_handle: "test2",
+      email: "tes2t@gmail.com",
+      password: "Test@123"
+    })
+  });
+
+  const data = await response.json();
+
+  console.log(data);
+  ```
+
+  ---
+
+  # Example Axios
+
+  ```javascript
+  import axios from "axios";
+
+  const response = await axios.post("/api/v3/admin/register", {
+    user_name: "test",
+    user_handle: "test2",
+    email: "tes2t@gmail.com",
+    password: "Test@123"
+  });
+
+  console.log(response.data);
+  ```
+
+  ---
+
+  # Notes
+
+  * Request body must be valid JSON.
+  * The `Content-Type` header must be `application/json`.
+  * This is a **public** endpoint — no `Authorization` header is needed.
+  * The request body is strict — do not send extra fields beyond what's listed in the table above.
+  * `password` is never returned in any response.
+
+  ---
+
+  # Quick Summary
+
+  | Item            | Value                        |
+  | ---------------- | ----------------------------- |
+  | Endpoint         | `/api/v3/admin/register`     |
+  | Method           | `POST`                        |
+  | Route Type       | 🟢 Public                     |
+  | Authentication   | Not Required                  |
+  | Content-Type     | `application/json`            |
+  | Success Status   | `200 OK`                      |
+  | Response Format  | JSON                          |

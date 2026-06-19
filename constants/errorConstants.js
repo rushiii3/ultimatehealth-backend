@@ -27,6 +27,7 @@ const ERROR_CODES = Object.freeze({
     VALIDATION_ERROR: 'VALIDATION_ERROR',
     INVALID_INPUT: 'INVALID_INPUT',
     MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',
+    INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
 
     // Auth (intentionally vague to avoid leaking info)
     AUTH_FAILED: 'AUTH_FAILED', // covers invalid email/password

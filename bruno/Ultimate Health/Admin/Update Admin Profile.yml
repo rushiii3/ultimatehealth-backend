@@ -1,0 +1,23 @@
+info:
+  name: Update Admin Profile
+  type: http
+  seq: 11
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/v3/admin/update-profile"
+  body:
+    type: json
+    data: |-
+      {
+        "user_name": "test test",
+        "user_handle": "testttt344",
+        "profile_avtar": "http://test.com"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
