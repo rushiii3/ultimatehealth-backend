@@ -5,13 +5,11 @@ const {
     DeleteObjectCommand,
 } = require('@aws-sdk/client-s3')
 
-const s3 = new S3Client({
-    endpoint: 'http://localhost:9000',
-    region: 'us-east-1',
-    forcePathStyle: true,
+const s3Client = new S3Client({
+    region: 'ap-south-1',
     credentials: {
-        accessKeyId: 'minioadmin',
-        secretAccessKey: 'minioadmin',
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
 })
 
